@@ -22,7 +22,7 @@ jobs:
           node-version: 22
       - name: Version
         if: startsWith(github.ref, 'refs/tags/v')
-        run: cd desktop && npm version --no-git-tag-version "${GITHUB_REF_NAME#v}"
+        run: cd desktop && npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
       - name: Passerelle (pont C, serveur Go, interface)
         run: gateway/build.sh
       - name: Application (ffmpeg et bibliothèques embarqués)
@@ -58,7 +58,7 @@ jobs:
           install: git unzip
       - name: Version
         if: startsWith(github.ref, 'refs/tags/v')
-        run: cd desktop && npm version --no-git-tag-version "${GITHUB_REF_NAME#v}"
+        run: cd desktop && npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
       - name: ffmpeg (builds BtbN, référencés par ffmpeg.org)
         run: |
           mkdir -p "$RUNNER_TEMP/ffmpeg"
