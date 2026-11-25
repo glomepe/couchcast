@@ -109,6 +109,26 @@ export async function connectViewer(video: HTMLVideoElement, onState: (s: RTCPee
   };
 }
 
+/** Fonction de transfert des images reçues (« pq » ou « hlg » = HDR), lue sur une image décodée. */
+export async function detectTransfer(stream: MediaStream): Promise<string | null> {
+  const track = stream.getVideoTracks()[0];
+  if (!track || !('MediaStreamTrackProcessor' in window)) return null;
+  const clone = track.clone();
+  try {
+    const Processor = (window as unknown as { MediaStreamTrackProcessor: new (o: { track: MediaStreamTrack }) => { readable: ReadableStream<VideoFrame> } }).MediaStreamTrackProcessor;
+    const reader = new Processor({ track: clone }).readable.getReader();
+    const { value: frame } = await reader.read();
+    const transfer = frame?.colorSpace.transfer ?? null;
+    frame?.close();
+    await reader.cancel();
+    return transfer;
+  } catch {
+    return null;
+  } finally {
+    clone.stop();
+  }
+}
+
 // Réduit au minimum le tampon de lecture (Chrome : jitterBufferTarget, ancien nom playoutDelayHint).
 function lowLatency(receiver: RTCRtpReceiver) {
   const r = receiver as unknown as { jitterBufferTarget?: number | null; playoutDelayHint?: number };

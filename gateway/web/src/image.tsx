@@ -34,6 +34,24 @@ function read(): ImageSettings {
 
 let current = read();
 
+// Flux HDR en cours (renseigné par le lecteur) : les réglages sont alors suspendus.
+let streamHdr = false;
+const hdrListeners = new Set<() => void>();
+export function setStreamHdr(v: boolean) {
+  if (v === streamHdr) return;
+  streamHdr = v;
+  queueMicrotask(() => hdrListeners.forEach((l) => l()));
+}
+export function useStreamHdr(): boolean {
+  return useSyncExternalStore(
+    (l) => {
+      hdrListeners.add(l);
+      return () => hdrListeners.delete(l);
+    },
+    () => streamHdr,
+  );
+}
+
 export function setImageSettings(next: ImageSettings) {
   current = next;
   try {
@@ -66,8 +84,8 @@ export function cssFilter(s: ImageSettings): string {
 
 /** Noyau 3×3 d'accentuation : centre 1 + 4a, voisins -a. */
 export function sharpenKernel(amount: number): string {
-  const a = (amount * 0.6).toFixed(3);
-  const c = (1 + 4 * amount * 0.6).toFixed(3);
+  const a = (amount * 0.3).toFixed(3);
+  const c = (1 + 4 * amount * 0.3).toFixed(3);
   return `0 -${a} 0 -${a} ${c} -${a} 0 -${a} 0`;
 }
 

@@ -5,11 +5,11 @@ import { Drawer, type DrawerTab } from './Drawer';
 import { startGamepadLoop } from './gamepad';
 import { useI18n } from './i18n';
 import { useRefreshRate } from './display';
-import { ImageFilterDefs, cssFilter, useImageSettings } from './image';
+import { ImageFilterDefs, cssFilter, setStreamHdr, useImageSettings } from './image';
 import { ShortcutHelp, useShortcuts, type ShortcutAction } from './shortcuts';
 import { ClipButton, PingMeter, RecButton, clip, toggleRecording } from './studio/Controls';
 import { IconButton, Kbd } from './ui';
-import { connectViewer, type Viewer, type ViewerStats } from './webrtc';
+import { connectViewer, detectTransfer, type Viewer, type ViewerStats } from './webrtc';
 
 export function Player({ status, obs = false }: { status: Status; obs?: boolean }) {
   const { t } = useI18n();
@@ -184,6 +184,24 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
   useShortcuts(obs ? noop : onShortcut);
 
   const showVideo = rtcState === 'connected' && status.state === 'streaming';
+
+  // HDR détecté sur les images reçues (la PS5 peut passer en HDR d'elle-même en H.265) :
+  // les filtres d'image forceraient une conversion SDR qui fausse les couleurs.
+  const [hdr, setHdr] = useState(false);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!showVideo || !v?.srcObject) return;
+    let cancelled = false;
+    const check = () => detectTransfer(v.srcObject as MediaStream).then((t) => !cancelled && setHdr(t === 'pq' || t === 'hlg'));
+    check();
+    const id = setInterval(check, 10000); // la PS5 peut changer de mode en cours de partie
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [showVideo, status.settings.codec]);
+  setStreamHdr(hdr);
+
   const chromeHidden = idle && showVideo && !drawer && !showHelp;
 
   if (obs) {
@@ -203,7 +221,7 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
         playsInline
         muted
         className={showVideo ? '' : 'hidden'}
-        style={{ filter: cssFilter(image) }}
+        style={{ filter: hdr ? 'none' : cssFilter(image) }}
         onDoubleClick={toggleFullscreen}
       />
 

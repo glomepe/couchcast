@@ -23,7 +23,7 @@ import { api, formatClock, type LiveDestination, type LiveStatus, type Status, t
 import { useI18n } from './i18n';
 import { useRefreshRate } from './display';
 import { Calibration } from './Calibration';
-import { NEUTRAL, PRESETS, setImageSettings, useImageSettings, type ImageSettings } from './image';
+import { NEUTRAL, PRESETS, setImageSettings, useImageSettings, useStreamHdr, type ImageSettings } from './image';
 import { ShortcutList } from './shortcuts';
 import { useElapsed } from './studio/Controls';
 import { FFmpegWarning, Field, Segmented, Tabs, Toggle } from './ui';
@@ -51,7 +51,7 @@ export function Drawer({ status, tab, onTab, onClose }: { status: Status; tab: D
       <div className="drawer-body" key={tab}>
         {(tab === 'clips' || tab === 'live') && <FFmpegWarning ok={status.studio?.ffmpeg} os={status.studio?.os} t={t} />}
         {tab === 'stream' && <StreamTab status={status} />}
-        {tab === 'image' && <ImageTab hdr={status.settings.codec === 'h265-hdr'} />}
+        {tab === 'image' && <ImageTab />}
         {tab === 'clips' && status.studio && <ClipsTab settings={status.studio.settings} replayMB={status.studio.replayMB} available={status.studio.replaySeconds} />}
         {tab === 'live' && <LiveTab status={status} />}
         {tab === 'links' && <LinksTab />}
@@ -181,9 +181,10 @@ function LatencyTips({ status }: { status: Status }) {
 
 // --- Image ---------------------------------------------------------------------
 
-function ImageTab({ hdr }: { hdr: boolean }) {
+function ImageTab() {
   const { t } = useI18n();
   const s = useImageSettings();
+  const hdr = useStreamHdr();
   const [calibrating, setCalibrating] = useState(false);
   const set = (patch: Partial<ImageSettings>) => setImageSettings({ ...s, ...patch });
   const preset = (Object.keys(PRESETS) as Array<keyof typeof PRESETS>).find((k) => JSON.stringify(PRESETS[k]) === JSON.stringify(s));
