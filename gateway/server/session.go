@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -29,15 +30,19 @@ const (
 const idleTimeout = 60 * time.Second
 
 type Stats struct {
-	FPS        float64   `json:"fps"`
-	VideoKbps  float64   `json:"videoKbps"`
-	AudioKbps  float64   `json:"audioKbps"`
-	FramesLost int64     `json:"framesLost"`
-	FrameKB    float64   `json:"frameKB"`    // taille moyenne d'une image
-	MaxFrameKB float64   `json:"maxFrameKB"` // plus grosse image (souvent une image clé)
-	Viewers    int       `json:"viewers"`
-	UptimeS    int64     `json:"uptimeS"`
-	Ping       PingStats `json:"ping"`
+	FPS        float64 `json:"fps"`
+	VideoKbps  float64 `json:"videoKbps"`
+	AudioKbps  float64 `json:"audioKbps"`
+	FramesLost int64   `json:"framesLost"`
+	FrameKB    float64 `json:"frameKB"`    // taille moyenne d'une image
+	MaxFrameKB float64 `json:"maxFrameKB"` // plus grosse image (souvent une image clé)
+	// Régularité d'arrivée des images (PS5 → Mac) : une saccade se voit ici en premier.
+	IntervalP95 float64   `json:"intervalP95"`
+	IntervalMax float64   `json:"intervalMax"`
+	Hitches     int       `json:"hitches"` // intervalles > 2,5 × la normale sur la dernière seconde
+	Viewers     int       `json:"viewers"`
+	UptimeS     int64     `json:"uptimeS"`
+	Ping        PingStats `json:"ping"`
 }
 
 type VideoProfile struct {
@@ -97,11 +102,14 @@ type Manager struct {
 	winVideoB    int
 	winAudioB    int
 	winMaxFrame  int
+	winIntervals []float64
 	framesLost   int64
 	lastStats    Stats
 	lastVideoTs  time.Duration
 	paramSets    []byte     // derniers paramètres reçus (SPS/PPS, et VPS en H.265), Annex-B
 	codec        videoCodec // codec de la session en cours
+	nominalFPS   int        // cadence demandée à la PS5
+	videoClock   time.Duration
 	audioFrameMs time.Duration
 }
 
@@ -220,6 +228,19 @@ func (m *Manager) statsLoop() {
 		if m.winFrames > 0 {
 			st.FrameKB = float64(m.winVideoB) / float64(m.winFrames) / 1024
 		}
+		if n := len(m.winIntervals); n > 0 {
+			sorted := append([]float64(nil), m.winIntervals...)
+			sort.Float64s(sorted)
+			st.IntervalP95 = sorted[min(n-1, n*95/100)]
+			st.IntervalMax = sorted[n-1]
+			normal := sorted[n/2]
+			for _, iv := range sorted {
+				if iv > normal*2.5 {
+					st.Hitches++
+				}
+			}
+		}
+		m.winIntervals = m.winIntervals[:0]
 		m.winFrames, m.winVideoB, m.winAudioB, m.winMaxFrame = 0, 0, 0, 0
 		m.statsMu.Unlock()
 
@@ -311,6 +332,8 @@ func (m *Manager) connect(ctx context.Context, c Console, s StreamSettings) {
 	m.lastVideoTs = 0
 	m.paramSets = nil
 	m.codec = parseCodec(s.Codec)
+	m.nominalFPS = s.FPS
+	m.videoClock = 0
 	m.statsMu.Unlock()
 }
 
@@ -425,17 +448,6 @@ func (m *Manager) ViewerLeft() {
 // --- StreamHandler (appelé depuis le goroutine de lecture du pont) ---------
 
 func (m *Manager) OnVideo(au []byte, ts time.Duration) {
-	m.statsMu.Lock()
-	dur := ts - m.lastVideoTs
-	if m.lastVideoTs == 0 || dur <= 0 || dur > 200*time.Millisecond {
-		dur = time.Second / 60
-	}
-	m.lastVideoTs = ts
-	m.winFrames++
-	m.winVideoB += len(au)
-	m.winMaxFrame = max(m.winMaxFrame, len(au))
-	m.statsMu.Unlock()
-
 	m.mu.Lock()
 	if m.state != StateStreaming {
 		m.state = StateStreaming
@@ -469,12 +481,42 @@ func (m *Manager) OnVideo(au []byte, ts time.Duration) {
 		m.statsMu.Unlock()
 	}
 
+	dur := m.frameTiming(ts, len(au))
 	if err := m.VideoTrack(codec).WriteSample(media.Sample{Data: au, Duration: dur}); err != nil {
 		log.Printf("écriture vidéo : %v", err)
 	}
 	if m.Studio != nil {
 		m.Studio.capture.OnVideo(au, ts.Milliseconds(), info.idr)
 	}
+}
+
+// frameTiming renvoie l'avance d'horodatage RTP pour l'image suivante.
+// La PS5 produit ses images à cadence fixe, mais elles arrivent avec la gigue du Wi-Fi :
+// horodater à l'heure d'arrivée faisait rejouer cette gigue par le navigateur (saccades).
+// On horodate donc sur une grille régulière (1/fps), recalée seulement si l'écart avec
+// l'heure d'arrivée dépasse deux images (pertes, changement de cadence).
+func (m *Manager) frameTiming(ts time.Duration, size int) time.Duration {
+	m.statsMu.Lock()
+	defer m.statsMu.Unlock()
+	if gap := ts - m.lastVideoTs; m.lastVideoTs != 0 && gap > 0 {
+		m.winIntervals = append(m.winIntervals, float64(gap.Microseconds())/1000)
+	}
+	m.lastVideoTs = ts
+	m.winFrames++
+	m.winVideoB += size
+	m.winMaxFrame = max(m.winMaxFrame, size)
+
+	nominal := time.Second / time.Duration(max(m.nominalFPS, 1))
+	if m.videoClock == 0 {
+		m.videoClock = ts
+	}
+	dur := nominal
+	if drift := ts - m.videoClock; drift > 2*nominal || drift < -2*nominal {
+		dur = max(nominal+drift, nominal/2) // recalage sur l'heure réelle
+		dur = min(dur, 500*time.Millisecond)
+	}
+	m.videoClock += dur
+	return dur
 }
 
 // VideoTrack : piste WebRTC correspondant au codec.

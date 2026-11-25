@@ -129,6 +129,20 @@ export async function detectTransfer(stream: MediaStream): Promise<string | null
   }
 }
 
+/** Cible du tampon du navigateur selon le lissage (ms ; null = adaptatif, borné par le serveur). */
+export function applySmoothing(pc: RTCPeerConnection, level: string) {
+  const target = level === 'latency' ? 0 : level === 'smooth' ? 40 : 10;
+  for (const r of pc.getReceivers()) {
+    const rr = r as unknown as { jitterBufferTarget?: number | null; playoutDelayHint?: number };
+    try {
+      if ('jitterBufferTarget' in r) rr.jitterBufferTarget = target;
+      else rr.playoutDelayHint = (target ?? 0) / 1000;
+    } catch {
+      /* non supporté */
+    }
+  }
+}
+
 // Réduit au minimum le tampon de lecture (Chrome : jitterBufferTarget, ancien nom playoutDelayHint).
 function lowLatency(receiver: RTCRtpReceiver) {
   const r = receiver as unknown as { jitterBufferTarget?: number | null; playoutDelayHint?: number };

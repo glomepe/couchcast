@@ -109,6 +109,20 @@ function StreamTab({ status }: { status: Status }) {
           ))}
         </select>
       </Field>
+      <Field label={t('stream.smoothing')} hint={t(`stream.smoothing.${s.smoothing || 'balanced'}` as never)}>
+        <Segmented
+          value={s.smoothing || 'balanced'}
+          onChange={(smoothing) => {
+            setS({ ...s, smoothing });
+            api.settings({ ...status.settings, smoothing }).catch(() => {});
+          }}
+          items={[
+            { id: 'latency' as const, label: t('stream.smoothing.latencyLabel') },
+            { id: 'balanced' as const, label: t('stream.smoothing.balancedLabel') },
+            { id: 'smooth' as const, label: t('stream.smoothing.smoothLabel') },
+          ]}
+        />
+      </Field>
       <Field label={t('stream.codec')} hint={t('stream.codecHint')}>
         <Segmented
           value={s.codec || 'h264'}

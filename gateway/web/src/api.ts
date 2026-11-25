@@ -8,6 +8,7 @@ export interface StreamSettings {
   bitrate: number; // kbit/s, 0 = auto
   control: boolean; // la passerelle annonce une manette à la PS5 (déloge la manette locale)
   codec?: '' | 'h264' | 'h265' | 'h265-hdr';
+  smoothing?: '' | 'latency' | 'balanced' | 'smooth';
 }
 
 export interface Status {
@@ -22,6 +23,9 @@ export interface Status {
     audioKbps: number;
     framesLost: number;
     frameKB: number;
+    intervalP95: number;
+    intervalMax: number;
+    hitches: number;
     maxFrameKB: number;
     viewers: number;
     uptimeS: number;

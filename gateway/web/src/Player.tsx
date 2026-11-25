@@ -9,7 +9,7 @@ import { ImageFilterDefs, cssFilter, setStreamHdr, useImageSettings } from './im
 import { ShortcutHelp, useShortcuts, type ShortcutAction } from './shortcuts';
 import { ClipButton, PingMeter, RecButton, clip, toggleRecording } from './studio/Controls';
 import { IconButton, Kbd } from './ui';
-import { connectViewer, detectTransfer, type Viewer, type ViewerStats } from './webrtc';
+import { applySmoothing, connectViewer, detectTransfer, type Viewer, type ViewerStats } from './webrtc';
 
 export function Player({ status, obs = false }: { status: Status; obs?: boolean }) {
   const { t } = useI18n();
@@ -64,6 +64,12 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
   useEffect(() => {
     if (rtcState === 'failed') disconnect();
   }, [rtcState, disconnect]);
+
+  // Lissage : tampon du navigateur ajusté en direct (le serveur borne l'extension playout-delay).
+  const smoothing = status.settings.smoothing || 'balanced';
+  useEffect(() => {
+    if (viewerRef.current && rtcState === 'connected') applySmoothing(viewerRef.current.pc, smoothing);
+  }, [smoothing, rtcState]);
 
   // Changement de codec : la piste vidéo change côté serveur, il faut renégocier.
   const codec = status.settings.codec || 'h264';
@@ -381,6 +387,7 @@ function StatsHud({ status, viewer }: { status: Status; viewer: ViewerStats | nu
     [t('stats.ping'), p.samples ? `${p.avgMs.toFixed(1)} ms ±${p.jitterMs.toFixed(1)} · ${p.lossPct.toFixed(0)} %` : '—', p.avgMs > 8 ? 'warn' : undefined],
     [t('stats.lost'), String(s.framesLost), s.framesLost > 0 ? 'warn' : undefined],
     [t('stats.frame'), `${s.frameKB.toFixed(0)} / ${s.maxFrameKB.toFixed(0)} KB`],
+    [t('stats.cadence'), `p95 ${s.intervalP95.toFixed(1)} · max ${s.intervalMax.toFixed(0)} ms · ${s.hitches}`, s.hitches > 0 ? 'warn' : undefined],
   ];
   if (viewer) {
     rows.push(

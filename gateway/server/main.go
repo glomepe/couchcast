@@ -38,6 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("configuration illisible : %v", err)
 	}
+	SetSmoothing(cfg.Get().Settings.Smoothing)
 	manager, err := NewManager(Bridge{Path: *bridgePath}, cfg)
 	if err != nil {
 		log.Fatal(err)
@@ -277,13 +278,17 @@ func (a *API) settings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	previous := a.config.Get().Settings
 	if err := a.config.Update(func(c *Config) { c.Settings = s }); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	SetSmoothing(s.Smoothing) // appliqué en direct, sans reconnexion
+	onlySmoothing := previous
+	onlySmoothing.Smoothing = s.Smoothing
 	// Le profil vidéo se négocie à l'ouverture : on relance la session si elle tourne.
 	st := a.manager.Status().State
-	if st == StateStreaming || st == StateConnecting {
+	if onlySmoothing != s && (st == StateStreaming || st == StateConnecting) {
 		go func() {
 			a.manager.Stop()
 			_ = a.manager.Start()
