@@ -13,10 +13,6 @@ import (
 //   - aux sorties actives (enregistrement, lives), chacune avec son propre MKVWriter.
 // Rien n'est réencodé ici : un clip ou un enregistrement est une copie exacte du flux.
 
-// Une image clé toutes les 2 s : clips découpables à la seconde près et live compatible
-// avec les plateformes (Twitch exige un intervalle ≤ 4 s).
-const keyframeInterval = 2 * time.Second
-
 type mediaPacket struct {
 	video bool
 	key   bool

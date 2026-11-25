@@ -427,3 +427,18 @@ details .row { margin-top: 10px; }
 .warning-card { display: grid; gap: 6px; margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255, 181, 46, 0.45); background: rgba(255, 181, 46, 0.08); color: var(--warn); font-size: 13px; }
 .warning-card span { color: var(--text); }
 .warning-card code { color: var(--accent); font-size: 12.5px; }
+
+/* Décomposition de la latence (HUD) et conseils */
+.hud-latency { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line-2); display: grid; gap: 3px; }
+.hud-title { color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.lat-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px; margin-bottom: 4px; }
+.lat-bar i, .dot { background: var(--muted); }
+.lat-bar .net, .dot.net { background: #4fb3ff; }
+.lat-bar .app, .dot.app { background: var(--accent); }
+.lat-bar .disp, .dot.disp { background: #c084fc; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 6px; }
+.hud-row.total span { color: var(--text); font-weight: 700; }
+.hud-note { color: var(--faint); font-size: 10.5px; }
+.tips ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--text); font-size: 13.5px; }
+.tips li::marker { color: var(--warn); }
+.ok-line { color: var(--ok); font-size: 13.5px; }

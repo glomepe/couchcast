@@ -20,6 +20,8 @@ export interface Status {
     videoKbps: number;
     audioKbps: number;
     framesLost: number;
+    frameKB: number;
+    maxFrameKB: number;
     viewers: number;
     uptimeS: number;
     ping: PingStats;

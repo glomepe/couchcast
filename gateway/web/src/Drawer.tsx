@@ -21,6 +21,7 @@ import {
 import { useEffect, useState } from 'react';
 import { api, formatClock, type LiveDestination, type LiveStatus, type Status, type StreamSettings, type StudioSettings } from './api';
 import { useI18n } from './i18n';
+import { useRefreshRate } from './display';
 import { NEUTRAL, PRESETS, setImageSettings, useImageSettings, type ImageSettings } from './image';
 import { ShortcutList } from './shortcuts';
 import { useElapsed } from './studio/Controls';
@@ -106,6 +107,8 @@ function StreamTab({ status }: { status: Status }) {
         {msg && <span className="muted small">{msg}</span>}
       </div>
       <hr />
+      <LatencyTips status={status} />
+      <hr />
       <div className="console-card">
         <Gamepad2 size={20} />
         <div>
@@ -122,6 +125,33 @@ function StreamTab({ status }: { status: Status }) {
           <Unlink size={15} /> {t('stream.unpair')}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Conseils calculés à partir des mesures réelles (ping, gigue, taille des images, écran). */
+function LatencyTips({ status }: { status: Status }) {
+  const { t } = useI18n();
+  const hz = useRefreshRate();
+  const p = status.stats.ping;
+  const s = status.stats;
+  const tips: string[] = [];
+  if (p.samples && p.avgMs > 2.5) tips.push(t('tips.ethernet', { ms: p.avgMs.toFixed(1) }));
+  if (p.samples && p.jitterMs > 1.5) tips.push(t('tips.jitter', { ms: p.jitterMs.toFixed(1) }));
+  if (p.samples && p.avgMs > 2.5 && s.videoKbps > 22000) tips.push(t('tips.bitrate', { kb: s.frameKB.toFixed(0), mbps: (s.videoKbps / 1000).toFixed(0) }));
+  if (s.framesLost > 0) tips.push(t('tips.loss', { n: s.framesLost }));
+  if (hz < 100) tips.push(t('tips.refresh', { hz }));
+  return (
+    <div className="stack tips">
+      <h3>{t('tips.title')}</h3>
+      {tips.length === 0 ? <p className="ok-line">{t('tips.ok')}</p> : (
+        <ul>
+          {tips.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
+      )}
+      <p className="hint">{t('tips.keyframes')}</p>
     </div>
   );
 }

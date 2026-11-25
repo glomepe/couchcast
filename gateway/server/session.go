@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,8 @@ type Stats struct {
 	VideoKbps  float64   `json:"videoKbps"`
 	AudioKbps  float64   `json:"audioKbps"`
 	FramesLost int64     `json:"framesLost"`
+	FrameKB    float64   `json:"frameKB"`    // taille moyenne d'une image
+	MaxFrameKB float64   `json:"maxFrameKB"` // plus grosse image (souvent une image clé)
 	Viewers    int       `json:"viewers"`
 	UptimeS    int64     `json:"uptimeS"`
 	Ping       PingStats `json:"ping"`
@@ -73,23 +76,26 @@ type Manager struct {
 	Video *webrtc.TrackLocalStaticSample
 	Audio *webrtc.TrackLocalStaticSample
 
-	mu         sync.Mutex
-	state      State
-	lastErr    string
-	proc       *StreamProcess
-	profile    *VideoProfile
-	viewers    int
-	noViewerAt time.Time // début de la période sans spectateur
-	startedAt  time.Time
-	lastIDR    time.Time
-	subs       map[chan Status]struct{}
-	cancelWake context.CancelFunc
+	mu              sync.Mutex
+	state           State
+	lastErr         string
+	proc            *StreamProcess
+	profile         *VideoProfile
+	viewers         int
+	noViewerAt      time.Time // début de la période sans spectateur
+	startedAt       time.Time
+	lastIDR         time.Time
+	lastPeriodicIDR time.Time
+	inUseRetries    int // tentatives après « Remote Play déjà utilisé »
+	subs            map[chan Status]struct{}
+	cancelWake      context.CancelFunc
 
 	// Compteurs de la fenêtre courante (une seconde).
 	statsMu      sync.Mutex
 	winFrames    int
 	winVideoB    int
 	winAudioB    int
+	winMaxFrame  int
 	framesLost   int64
 	lastStats    Stats
 	lastVideoTs  time.Duration
@@ -202,7 +208,11 @@ func (m *Manager) statsLoop() {
 			AudioKbps:  float64(m.winAudioB*8) / secs / 1000,
 			FramesLost: m.framesLost,
 		}
-		m.winFrames, m.winVideoB, m.winAudioB = 0, 0, 0
+		st.MaxFrameKB = float64(m.winMaxFrame) / 1024
+		if m.winFrames > 0 {
+			st.FrameKB = float64(m.winVideoB) / float64(m.winFrames) / 1024
+		}
+		m.winFrames, m.winVideoB, m.winAudioB, m.winMaxFrame = 0, 0, 0, 0
 		m.statsMu.Unlock()
 
 		m.mu.Lock()
@@ -219,7 +229,8 @@ func (m *Manager) statsLoop() {
 
 		if proc != nil && streaming && m.Studio != nil {
 			// Images clés régulières : clips découpables et live compatible.
-			if now.Unix()%int64(keyframeInterval.Seconds()) == 0 && m.Studio.NeedsKeyframes() {
+			if iv := m.Studio.KeyframeInterval(); iv > 0 && now.Sub(m.lastPeriodicIDR) >= iv {
+				m.lastPeriodicIDR = now
 				m.RequestKeyframe()
 			}
 			if idle && !m.Studio.Busy() {
@@ -413,11 +424,13 @@ func (m *Manager) OnVideo(au []byte, ts time.Duration) {
 	m.lastVideoTs = ts
 	m.winFrames++
 	m.winVideoB += len(au)
+	m.winMaxFrame = max(m.winMaxFrame, len(au))
 	m.statsMu.Unlock()
 
 	m.mu.Lock()
 	if m.state != StateStreaming {
 		m.state = StateStreaming
+		m.inUseRetries = 0
 		m.lastErr = ""
 		m.broadcastLocked()
 	}
@@ -516,10 +529,27 @@ func (m *Manager) OnExit(err error) {
 		m.cancelWake()
 		m.cancelWake = nil
 	}
+	cfg := m.config.Get()
 	switch {
 	case err != nil:
 		m.state = StateError
 		m.lastErr = err.Error()
+	case !stoppedByUs && strings.Contains(m.lastErr, "already in use") && m.inUseRetries < 4 && cfg.Console != nil:
+		// Juste après un redémarrage, la PS5 met quelques secondes à libérer l'ancienne
+		// session : on réessaie au lieu d'afficher une erreur.
+		m.inUseRetries++
+		log.Printf("Remote Play encore occupé, nouvel essai dans 3 s (%d/4)", m.inUseRetries)
+		m.state = StateConnecting
+		ctx, cancel := context.WithCancel(context.Background())
+		m.cancelWake = cancel
+		console, settings := *cfg.Console, cfg.Settings
+		go func() {
+			select {
+			case <-ctx.Done():
+			case <-time.After(3 * time.Second):
+				m.connect(ctx, console, settings)
+			}
+		}()
 	case !stoppedByUs && m.lastErr != "" && m.lastErr != "Stopped":
 		// La console a mis fin à la session (ex. Remote Play déjà utilisé ailleurs).
 		m.state = StateError

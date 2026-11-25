@@ -4,6 +4,7 @@ import { api, formatClock, type Status } from './api';
 import { Drawer, type DrawerTab } from './Drawer';
 import { startGamepadLoop } from './gamepad';
 import { useI18n } from './i18n';
+import { useRefreshRate } from './display';
 import { cssFilter, sharpenKernel, useImageSettings } from './image';
 import { ShortcutHelp, useShortcuts, type ShortcutAction } from './shortcuts';
 import { ClipButton, PingMeter, RecButton, clip, toggleRecording } from './studio/Controls';
@@ -347,6 +348,7 @@ function PinPrompt({ error }: { error?: string }) {
 
 function StatsHud({ status, viewer }: { status: Status; viewer: ViewerStats | null }) {
   const { t } = useI18n();
+  const hz = useRefreshRate();
   const s = status.stats;
   const p = s.ping;
   const rows: Array<[string, string, string?]> = [
@@ -354,6 +356,7 @@ function StatsHud({ status, viewer }: { status: Status; viewer: ViewerStats | nu
     [t('stats.received'), `${s.fps.toFixed(0)} fps · ${(s.videoKbps / 1000).toFixed(1)} Mb/s`],
     [t('stats.ping'), p.samples ? `${p.avgMs.toFixed(1)} ms ±${p.jitterMs.toFixed(1)} · ${p.lossPct.toFixed(0)} %` : '—', p.avgMs > 8 ? 'warn' : undefined],
     [t('stats.lost'), String(s.framesLost), s.framesLost > 0 ? 'warn' : undefined],
+    [t('stats.frame'), `${s.frameKB.toFixed(0)} / ${s.maxFrameKB.toFixed(0)} KB`],
   ];
   if (viewer) {
     rows.push(
@@ -362,8 +365,14 @@ function StatsHud({ status, viewer }: { status: Status; viewer: ViewerStats | nu
       [t('stats.decode'), `${viewer.decodeMs.toFixed(1)} ms`],
       [t('stats.pipeline'), `${viewer.pipelineMs.toFixed(0)} ms`],
       [t('stats.dropped'), `${viewer.packetsLost} / ${viewer.framesDropped}`],
+      [t('stats.audioBuffer'), `${viewer.audioBufferMs.toFixed(0)} ms`],
     );
   }
+  // Estimation de la latence mesurable : aller réseau + Couchcast + attente moyenne de l'écran.
+  const net = p.samples ? p.avgMs / 2 : 0;
+  const app = viewer ? viewer.pipelineMs : 0;
+  const display = 1000 / hz / 2;
+  const total = net + app + display;
   rows.push([t('stats.audio'), `${s.audioKbps.toFixed(0)} kb/s`], [t('stats.viewers'), String(s.viewers)], [t('stats.uptime'), formatClock(s.uptimeS)]);
   return (
     <aside className="stats-hud mono">
@@ -373,6 +382,21 @@ function StatsHud({ status, viewer }: { status: Status; viewer: ViewerStats | nu
           <span className={tone}>{v}</span>
         </div>
       ))}
+      {viewer && (
+        <div className="hud-latency">
+          <div className="hud-title">{t('lat.title')}</div>
+          <div className="lat-bar" aria-hidden>
+            <i className="net" style={{ flex: net }} />
+            <i className="app" style={{ flex: app }} />
+            <i className="disp" style={{ flex: display }} />
+          </div>
+          <div className="hud-row"><span><b className="dot net" />{t('lat.network')}</span><span>{net.toFixed(1)} ms</span></div>
+          <div className="hud-row"><span><b className="dot app" />{t('lat.app')}</span><span>{app.toFixed(1)} ms</span></div>
+          <div className="hud-row"><span><b className="dot disp" />{t('lat.display', { hz })}</span><span>{display.toFixed(1)} ms</span></div>
+          <div className="hud-row total"><span>{t('lat.total')}</span><span>≈ {total.toFixed(0)} ms</span></div>
+          <div className="hud-note">{t('lat.ps5')}</div>
+        </div>
+      )}
     </aside>
   );
 }

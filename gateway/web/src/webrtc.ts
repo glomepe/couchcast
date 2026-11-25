@@ -9,6 +9,7 @@ export interface ViewerStats {
   packetsLost: number;
   framesDropped: number;
   jitterBufferMs: number; // tampon de gigue (valeur sur la dernière seconde)
+  audioBufferMs: number; // tampon audio du navigateur
   decodeMs: number; // temps de décodage moyen d'une image
   pipelineMs: number; // de la réception du premier paquet à l'image décodée
   rttMs: number;
@@ -61,7 +62,7 @@ export async function connectViewer(video: HTMLVideoElement, onState: (s: RTCPee
     close: () => pc.close(),
     async stats() {
       const report = await pc.getStats();
-      const s: ViewerStats = { fps: 0, kbps: 0, width: 0, height: 0, packetsLost: 0, framesDropped: 0, jitterBufferMs: 0, decodeMs: 0, pipelineMs: 0, rttMs: 0, codec: '' };
+      const s: ViewerStats = { fps: 0, kbps: 0, width: 0, height: 0, packetsLost: 0, framesDropped: 0, jitterBufferMs: 0, audioBufferMs: 0, decodeMs: 0, pipelineMs: 0, rttMs: 0, codec: '' };
       const codecs = new Map<string, string>();
       report.forEach((r) => {
         if (r.type === 'codec') codecs.set(r.id, r.mimeType);
@@ -95,6 +96,9 @@ export async function connectViewer(video: HTMLVideoElement, onState: (s: RTCPee
             processing: r.totalProcessingDelay ?? 0,
             decoded,
           };
+        }
+        if (r.type === 'inbound-rtp' && r.kind === 'audio' && r.jitterBufferEmittedCount) {
+          s.audioBufferMs = (r.jitterBufferDelay / r.jitterBufferEmittedCount) * 1000;
         }
         if (r.type === 'candidate-pair' && r.nominated && r.currentRoundTripTime !== undefined) {
           s.rttMs = r.currentRoundTripTime * 1000;
