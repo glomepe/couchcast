@@ -131,7 +131,7 @@ export async function detectTransfer(stream: MediaStream): Promise<string | null
 
 /** Cible du tampon du navigateur selon le lissage (ms ; null = adaptatif, borné par le serveur). */
 export function applySmoothing(pc: RTCPeerConnection, level: string) {
-  const target = level === 'latency' ? 0 : level === 'smooth' ? 40 : 10;
+  const target = level === 'latency' ? 0 : level === 'smooth' ? 40 : null;
   for (const r of pc.getReceivers()) {
     const rr = r as unknown as { jitterBufferTarget?: number | null; playoutDelayHint?: number };
     try {

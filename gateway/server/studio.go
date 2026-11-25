@@ -96,9 +96,9 @@ func NewStudio(cfg *ConfigStore, lib *Library, notify func()) *Studio {
 
 // KeyframeInterval : fréquence des images clés à demander à la PS5 (0 = aucune).
 // Une image clé est 3 à 5 fois plus lourde qu'une image normale : sur Wi-Fi elle met
-// plus longtemps à arriver, d'où un petit pic de latence. On n'en demande donc que
-// si c'est utile : 2 s pendant un live (Twitch exige ≤ 4 s), 6 s pour le replay
-// (un clip démarre au plus 6 s avant le moment demandé), aucune sinon.
+// plus longtemps à arriver : Chrome agrandit alors son tampon (latence). On n'en demande
+// donc que si c'est utile : 2 s pendant un live (Twitch exige ≤ 4 s), 20 s pour le
+// replay (un clip démarre au plus 20 s avant le moment demandé), aucune sinon.
 func (s *Studio) KeyframeInterval() time.Duration {
 	s.mu.Lock()
 	lives := len(s.lives)
@@ -107,7 +107,7 @@ func (s *Studio) KeyframeInterval() time.Duration {
 	case lives > 0:
 		return 2 * time.Second
 	case s.config.Get().Studio.ReplaySeconds > 0:
-		return 6 * time.Second
+		return 20 * time.Second
 	default:
 		return 0
 	}

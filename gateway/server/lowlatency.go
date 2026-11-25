@@ -19,7 +19,7 @@ var playoutDelay atomic.Uint32
 
 // SetSmoothing applique le niveau de lissage à tous les spectateurs, immédiatement.
 func SetSmoothing(level string) {
-	minMs, maxMs := 10, 40 // équilibré (par défaut) : une petite marge pour une cadence régulière
+	minMs, maxMs := 0, 20 // équilibré (par défaut) : tampon adaptatif, plafonné bas
 	switch level {
 	case "latency":
 		minMs, maxMs = 0, 0
