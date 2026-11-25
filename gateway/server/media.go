@@ -153,7 +153,7 @@ func (l *Library) duration(path string) float64 {
 	if v, ok := durationCache.Load(key); ok {
 		return v.(float64)
 	}
-	out, err := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path).Output()
+	out, err := exec.Command(ffprobeBin, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path).Output()
 	if err != nil {
 		return 0
 	}
@@ -202,7 +202,7 @@ func (l *Library) startJob(kind, label string, run func() (string, error)) *Job 
 }
 
 func ffmpeg(ctx context.Context, args ...string) error {
-	cmd := exec.CommandContext(ctx, "ffmpeg", append([]string{"-hide_banner", "-nostdin", "-y", "-v", "error"}, args...)...)
+	cmd := exec.CommandContext(ctx, ffmpegBin, append([]string{"-hide_banner", "-nostdin", "-y", "-v", "error"}, args...)...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -258,9 +258,10 @@ func (l *Library) ExportVertical(name string, layout VerticalLayout) *Job {
 	return l.startJob("vertical", "Vertical · "+name, func() (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
 		defer cancel()
-		err := ffmpeg(ctx, "-i", src, "-filter_complex", verticalFilter(layout), "-map", "[v]", "-map", "0:a?",
-			"-c:v", "h264_videotoolbox", "-b:v", "12M", "-profile:v", "high", "-c:a", "copy",
-			"-movflags", "+faststart", filepath.Join(l.Dir, outName))
+		args := []string{"-i", src, "-filter_complex", verticalFilter(layout), "-map", "[v]", "-map", "0:a?"}
+		args = append(args, encodeArgs(12000, false)...)
+		args = append(args, "-c:a", "copy", "-movflags", "+faststart", filepath.Join(l.Dir, outName))
+		err := ffmpeg(ctx, args...)
 		if err != nil {
 			return "", err
 		}

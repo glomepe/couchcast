@@ -21,7 +21,7 @@ import { api, formatClock, type LiveDestination, type LiveStatus, type Status, t
 import { useI18n } from './i18n';
 import { ShortcutList } from './shortcuts';
 import { useElapsed } from './studio/Controls';
-import { Field, Segmented, Tabs, Toggle } from './ui';
+import { FFmpegWarning, Field, Segmented, Tabs, Toggle } from './ui';
 
 export type DrawerTab = 'stream' | 'clips' | 'live' | 'links' | 'app';
 
@@ -43,6 +43,7 @@ export function Drawer({ status, tab, onTab, onClose }: { status: Status; tab: D
         </button>
       </header>
       <div className="drawer-body" key={tab}>
+        {(tab === 'clips' || tab === 'live') && <FFmpegWarning ok={status.studio?.ffmpeg} os={status.studio?.os} t={t} />}
         {tab === 'stream' && <StreamTab status={status} />}
         {tab === 'clips' && status.studio && <ClipsTab settings={status.studio.settings} replayMB={status.studio.replayMB} available={status.studio.replaySeconds} />}
         {tab === 'live' && <LiveTab status={status} />}

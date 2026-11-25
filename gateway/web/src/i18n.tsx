@@ -150,6 +150,10 @@ const fr = {
   'sc.close': 'Fermer le panneau',
   'sc.show': 'Afficher la fenêtre',
 
+  // ffmpeg absent
+  'ffmpeg.missing': 'ffmpeg est introuvable : clips, enregistrements et lives ne fonctionneront pas.',
+  'ffmpeg.install': 'Installez-le puis relancez Couchcast :',
+
   // Notifications
   'toast.running': '{label} : traitement…',
   'toast.clip': 'Clip sauvegardé',
@@ -355,6 +359,9 @@ const en: Record<Key, string> = {
   'sc.help': 'This help',
   'sc.close': 'Close panel',
   'sc.show': 'Show window',
+
+  'ffmpeg.missing': 'ffmpeg was not found: clips, recordings and live streams will not work.',
+  'ffmpeg.install': 'Install it, then restart Couchcast:',
 
   'toast.running': '{label}: processing…',
   'toast.clip': 'Clip saved',

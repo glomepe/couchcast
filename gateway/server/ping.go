@@ -3,12 +3,8 @@ package main
 import (
 	"math"
 	"net"
-	"os"
 	"sync"
 	"time"
-
-	"golang.org/x/net/icmp"
-	"golang.org/x/net/ipv4"
 )
 
 // Pinger mesure en continu la latence réseau Mac → PS5 (ICMP « datagram », sans
@@ -54,14 +50,12 @@ func (p *Pinger) Stats() PingStats {
 }
 
 func (p *Pinger) loop() {
-	conn, err := icmp.ListenPacket("udp4", "0.0.0.0")
+	probe, err := newProber()
 	if err != nil {
 		return // ping indisponible : les stats restent à zéro
 	}
-	defer conn.Close()
-	id := os.Getpid() & 0xffff
-	buf := make([]byte, 1500)
-	for seq := 0; ; seq++ {
+	defer probe.Close()
+	for {
 		p.mu.Lock()
 		host := p.host
 		p.mu.Unlock()
@@ -70,28 +64,8 @@ func (p *Pinger) loop() {
 			time.Sleep(time.Second)
 			continue
 		}
-		msg := icmp.Message{Type: ipv4.ICMPTypeEcho, Body: &icmp.Echo{ID: id, Seq: seq & 0xffff, Data: []byte("couchcast")}}
-		wb, _ := msg.Marshal(nil)
 		start := time.Now()
-		rtt := -1.0
-		if _, err := conn.WriteTo(wb, &net.UDPAddr{IP: dst.IP}); err == nil {
-			deadline := start.Add(400 * time.Millisecond)
-			_ = conn.SetReadDeadline(deadline)
-			for {
-				n, _, err := conn.ReadFrom(buf)
-				if err != nil {
-					break
-				}
-				rm, err := icmp.ParseMessage(1, buf[:n])
-				if err != nil || rm.Type != ipv4.ICMPTypeEchoReply {
-					continue
-				}
-				if echo, ok := rm.Body.(*icmp.Echo); ok && echo.Seq == seq&0xffff {
-					rtt = float64(time.Since(start).Microseconds()) / 1000
-					break
-				}
-			}
-		}
+		rtt := probe.Ping(dst.IP, 400*time.Millisecond)
 		p.record(rtt)
 		time.Sleep(time.Until(start.Add(500 * time.Millisecond)))
 	}

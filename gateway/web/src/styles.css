@@ -423,3 +423,7 @@ details .row { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+.warning-card { display: grid; gap: 6px; margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255, 181, 46, 0.45); background: rgba(255, 181, 46, 0.08); color: var(--warn); font-size: 13px; }
+.warning-card span { color: var(--text); }
+.warning-card code { color: var(--accent); font-size: 12.5px; }

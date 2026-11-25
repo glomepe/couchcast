@@ -15,3 +15,4 @@ gateway/data/
 .vscode/
 .DS_Store
 *.log
+desktop/resources/

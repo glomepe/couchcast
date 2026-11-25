@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"net/http"
-	"os/exec"
 	"strconv"
 )
 
@@ -105,7 +104,7 @@ func (a *API) registerStudio(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/library/{name}/reveal", func(w http.ResponseWriter, r *http.Request) {
 		p, err := a.library.Path(r.PathValue("name"))
 		if err == nil {
-			err = exec.Command("open", "-R", p).Run()
+			err = revealFile(p)
 		}
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err)

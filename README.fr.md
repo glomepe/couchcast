@@ -7,6 +7,21 @@
 > [!WARNING]
 > **Ce projet a été « vibe codé ».** Il a été écrit en quelques sessions avec un assistant IA et testé sur une seule configuration (Mac Apple Silicon + PS5 en Wi-Fi). Il n'a pas de vraie suite de tests automatisés. Il fonctionne sur cette configuration, peut-être pas sur la vôtre. Lisez le code avant de lui faire confiance et attendez-vous à quelques angles morts.
 
+## Sommaire
+
+- [Fonctionnalités](#fonctionnalités)
+- [Fonctionnement](#fonctionnement)
+- [Téléchargement](#téléchargement)
+- [Prérequis](#prérequis)
+- [Compiler depuis les sources](#compiler-depuis-les-sources)
+- [Premier lancement : l'appairage](#premier-lancement--lappairage)
+- [Raccourcis clavier](#raccourcis-clavier)
+- [Réduire la latence](#réduire-la-latence)
+- [Sécurité et vie privée](#sécurité-et-vie-privée)
+- [Limites connues](#limites-connues)
+- [Remerciements](#remerciements)
+- [Licence et marques](#licence-et-marques)
+
 Couchcast parle le protocole **Remote Play** de la PS5 (via la bibliothèque de [chiaki-ng](https://github.com/streetpea/chiaki-ng)). Il transmet la vidéo H.264 et le son Opus de la console **tels quels** en WebRTC, sans réencodage : la latence ajoutée est de quelques millisecondes et le Mac ne travaille presque pas.
 
 ## Fonctionnalités
@@ -19,7 +34,7 @@ Couchcast parle le protocole **Remote Play** de la PS5 (via la bibliothèque de 
 - **Bibliothèque** avec miniatures, lecture, téléchargement, export vertical et ouverture dans le Finder.
 - **Télécommande sur téléphone** : démarrer la session, enregistrer et clipper sans quitter la TV des yeux.
 - **Source OBS** : une adresse « propre » (image + son, sans interface) à ajouter comme source navigateur.
-- **App macOS** : icône dans la barre des menus, raccourcis globaux, notifications, anti-veille.
+- **App de bureau macOS et Windows** : icône dans la barre des menus ou des tâches, raccourcis globaux, notifications, anti-veille.
 - Interface **français / anglais**, au choix dans l'app.
 
 ## Fonctionnement
@@ -42,27 +57,53 @@ PS5 ──Remote Play (H.264 + Opus)──► couchcast-bridge (C, lib chiaki-ng
 | `gateway/web/` | Interface React (Vite) : lecteur, réglages, bibliothèque, télécommande, assistant d'appairage. |
 | `desktop/` | Coque Electron : lance le serveur, barre des menus, raccourcis globaux. |
 
+## Téléchargement
+
+Récupérez la dernière version sur la **[page des Releases](https://github.com/glomepe/couchcast/releases/latest)** :
+
+| Système | Fichier |
+|---|---|
+| macOS (Apple Silicon, M1 et suivants) | `Couchcast-<version>-mac-arm64.dmg` |
+| Windows 10/11 (x64) | `Couchcast-<version>-win-x64.exe` (installateur) ou `.zip` (portable) |
+
+ffmpeg et toutes les bibliothèques sont inclus. Il n'y a rien d'autre à installer.
+
+### Ouvrir l'app la première fois
+
+L'app **n'est pas signée** par Apple ni par Microsoft (ces certificats sont payants), donc le système vous avertit la première fois :
+
+- **macOS.** Ouvrez le `.dmg` et glissez *Couchcast* dans *Applications*. Lancez-la une fois : macOS refuse. Allez alors dans **Réglages Système › Confidentialité et sécurité**, descendez jusqu'au message concernant Couchcast et cliquez sur **Ouvrir quand même**. Si macOS affirme que l'app « est endommagée », lancez une fois dans le Terminal :
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/Couchcast.app
+  ```
+- **Windows.** Si SmartScreen affiche « Windows a protégé votre ordinateur », cliquez sur **Informations complémentaires › Exécuter quand même**. Autorisez Couchcast sur les **réseaux privés** quand le pare-feu le demande : c'est ce qui permet à la PS5, au téléphone et à OBS de le joindre.
+
 ## Prérequis
 
-- **macOS sur Apple Silicon.** C'est la seule plateforme testée. Le serveur devrait pouvoir tourner sous Linux (C + Go + ffmpeg), sauf l'encodeur VideoToolbox utilisé pour les exports verticaux et les lives réencodés, mais ça n'a jamais été essayé.
-- [Homebrew](https://brew.sh), **ffmpeg** (`brew install ffmpeg`), **Node.js 22+**, les outils en ligne de commande Xcode. `build.sh` installe le reste : cmake, Go, protobuf, OpenSSL…
+- **macOS sur Apple Silicon** ou **Windows 10/11 x64**. L'usage et les tests se font sur macOS ; la version Windows est compilée par la CI mais a encore très peu servi en conditions réelles.
 - Une **PS5** avec la lecture à distance activée (*Paramètres › Système › Lecture à distance*).
 - Un **second compte PSN**, connecté sur la PS5 (voir plus bas).
+- Pour les exports verticaux et les lives réencodés, Couchcast utilise l'encodeur matériel disponible : VideoToolbox sur Mac ; NVENC, Quick Sync ou AMF sous Windows. À défaut, il se rabat sur x264, sur le processeur.
 
-## Installation
+## Compiler depuis les sources
+
+**macOS** : il faut [Homebrew](https://brew.sh), Node.js 22+ et les outils en ligne de commande Xcode.
 
 ```sh
-git clone <ce dépôt> couchcast && cd couchcast
+git clone https://github.com/glomepe/couchcast && cd couchcast
 desktop/build-app.sh --install    # compile tout et copie Couchcast.app dans /Applications
 ```
 
-L'app n'est pas signée. Comme vous la compilez vous-même, macOS la laisse s'ouvrir.
-
-Sans l'app de bureau :
+**Windows** : il faut [MSYS2](https://www.msys2.org), [Go](https://go.dev/dl/) et [Node.js 22+](https://nodejs.org). Dans un terminal **MSYS2 UCRT64** lancé avec le PATH de Windows (`MSYS2_PATH_TYPE=inherit`) :
 
 ```sh
-cd gateway && ./build.sh && ./run.sh    # puis http://<ip-du-mac>:8765/
+git clone https://github.com/glomepe/couchcast && cd couchcast
+gateway/build.sh && cd desktop && npm ci && ./package.sh    # installateur dans desktop/dist/
 ```
+
+**Serveur seul** (sans l'app de bureau, avec n'importe quel navigateur) : `cd gateway && ./build.sh && ./run.sh`, puis `http://<ip-de-l-ordinateur>:8765/`. ffmpeg doit alors être installé et dans le PATH (`brew install ffmpeg` / `winget install ffmpeg`).
+
+Les versions téléchargeables sont produites par le workflow [Build & release](.github/workflows/release.yml) : poussez un tag `v*`, ou lancez-le à la main depuis l'onglet *Actions*.
 
 ## Premier lancement : l'appairage
 
@@ -104,7 +145,7 @@ L'app et le navigateur n'ajoutent presque rien : environ 2 ms de tampon et envir
 - **1080p maximum** : c'est la limite du protocole Remote Play. Pas de HDR (le flux est en H.264 SDR pour rester compatible avec les navigateurs).
 - Les applis protégées par DRM (Netflix…) ne sont pas transmises par Remote Play.
 - Certains messages d'erreur du serveur n'existent qu'en français.
-- Testé uniquement sous macOS 26 / M4 Pro, avec le rendu de Chromium.
+- Usage et tests au quotidien sous macOS 26 / M4 Pro. La version Windows compile dans la CI mais a encore peu servi en conditions réelles.
 
 ## Remerciements
 

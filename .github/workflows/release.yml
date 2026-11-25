@@ -1,0 +1,94 @@
+name: Build & release
+
+# Compile Couchcast pour macOS (Apple Silicon) et Windows (x64).
+# - Lancement manuel (Actions › Build & release › Run workflow) : binaires en artefacts.
+# - Tag « v* » (ex. v0.3.0) : publie en plus une release GitHub avec les fichiers téléchargeables.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: macOS (Apple Silicon)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cd desktop && npm version --no-git-tag-version "${GITHUB_REF_NAME#v}"
+      - name: Passerelle (pont C, serveur Go, interface)
+        run: gateway/build.sh
+      - name: Application (ffmpeg et bibliothèques embarqués)
+        run: cd desktop && npm ci && ./package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: couchcast-macos
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+          if-no-files-found: error
+
+  windows:
+    name: Windows (x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: gateway/server/go.sum
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: inherit # Go et Node installés côté Windows
+          install: git unzip
+      - name: Version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cd desktop && npm version --no-git-tag-version "${GITHUB_REF_NAME#v}"
+      - name: ffmpeg (builds BtbN, référencés par ffmpeg.org)
+        run: |
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          curl -fsSL -o ffmpeg.zip https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-gpl-8.1.zip
+          unzip -q -j ffmpeg.zip '*/bin/ffmpeg.exe' '*/bin/ffprobe.exe' -d "$RUNNER_TEMP/ffmpeg"
+          rm ffmpeg.zip
+      - name: Passerelle (pont C, serveur Go, interface)
+        run: gateway/build.sh
+      - name: Application (ffmpeg et DLL embarqués)
+        run: cd desktop && npm ci && FFMPEG_DIR="$(cygpath -u "$RUNNER_TEMP")/ffmpeg" ./package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: couchcast-windows
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Release GitHub
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true

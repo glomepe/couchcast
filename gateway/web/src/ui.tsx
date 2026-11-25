@@ -93,6 +93,20 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
   );
 }
 
+/** Avertissement si ffmpeg n'est pas installé (indispensable au studio). */
+export function FFmpegWarning({ ok, os, t }: { ok?: boolean; os?: string; t: (k: 'ffmpeg.missing' | 'ffmpeg.install') => string }) {
+  if (ok !== false) return null;
+  const cmd = os === 'windows' ? 'winget install ffmpeg' : os === 'darwin' ? 'brew install ffmpeg' : 'sudo apt install ffmpeg';
+  return (
+    <div className="warning-card">
+      <strong>{t('ffmpeg.missing')}</strong>
+      <span>
+        {t('ffmpeg.install')} <code>{cmd}</code>
+      </span>
+    </div>
+  );
+}
+
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="field">

@@ -1,14 +1,38 @@
 #!/usr/bin/env bash
 # Compile la passerelle : pont C (lib chiaki-ng), serveur Go, interface React.
+#   macOS   : dépendances via Homebrew.
+#   Windows : à lancer dans un terminal MSYS2 « UCRT64 » (dépendances via pacman),
+#             avec Go et Node.js installés côté Windows et visibles dans le PATH.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# Dépendances Homebrew (sans effet si déjà installées).
-brew list cmake go pkgconf protobuf miniupnpc libevent json-c opus openssl@4 curl >/dev/null 2>&1 \
-  || brew install cmake go pkgconf protobuf miniupnpc libevent json-c opus openssl@4 curl
+case "$(uname -s)" in
+  Darwin) PLATFORM=macos ;;
+  MINGW*|MSYS*|UCRT*|CLANG*) PLATFORM=windows ;;
+  *) echo "Plateforme non prise en charge : $(uname -s) (macOS ou Windows/MSYS2)"; exit 1 ;;
+esac
+EXE=""; [ "$PLATFORM" = windows ] && EXE=".exe"
+JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
 
-# Python isolé pour le générateur nanopb de chiaki.
-[ -x .venv/bin/python ] || { python3 -m venv .venv && .venv/bin/pip -q install protobuf; }
+CMAKE_ARGS=(-DCMAKE_BUILD_TYPE=Release -Wno-dev)
+if [ "$PLATFORM" = macos ]; then
+  brew list cmake go pkgconf protobuf miniupnpc libevent json-c opus curl >/dev/null 2>&1 \
+    || brew install cmake go pkgconf protobuf miniupnpc libevent json-c opus curl
+  # Il faut lier la version d'OpenSSL dont les en-têtes sont exposés dans $(brew --prefix)/include.
+  OPENSSL=openssl@3
+  if grep -qsE 'OPENSSL_VERSION_MAJOR +4' "$(brew --prefix)/include/openssl/opensslv.h"; then OPENSSL=openssl@4; fi
+  brew list "$OPENSSL" >/dev/null 2>&1 || brew install "$OPENSSL"
+  # Python isolé pour le générateur nanopb de chiaki.
+  [ -x .venv/bin/python ] || { python3 -m venv .venv && .venv/bin/pip -q install protobuf; }
+  CMAKE_ARGS+=(-DPYTHON_EXECUTABLE="$PWD/.venv/bin/python"
+    -DOPENSSL_ROOT_DIR="$(brew --prefix "$OPENSSL")"
+    -DCMAKE_PREFIX_PATH="$(brew --prefix curl);$(brew --prefix "$OPENSSL")")
+else
+  P="${MINGW_PACKAGE_PREFIX:-mingw-w64-ucrt-x86_64}"
+  pacman -S --needed --noconfirm git "$P-cc" "$P-cmake" "$P-ninja" "$P-pkgconf" "$P-curl" "$P-json-c" \
+    "$P-libevent" "$P-miniupnpc" "$P-openssl" "$P-opus" "$P-protobuf" "$P-python" "$P-python-protobuf" >/dev/null
+  CMAKE_ARGS+=(-G Ninja -DPYTHON_EXECUTABLE="$(command -v python)")
+fi
 
 # Sources chiaki-ng (version figée) + sous-modules nécessaires.
 CHIAKI_REV=43728af2e639fecb8a7af1cd68c29820a40de973
@@ -22,16 +46,12 @@ if git -C third_party/chiaki-ng apply --check ../../patches/chiaki-spectator.pat
   git -C third_party/chiaki-ng apply ../../patches/chiaki-spectator.patch
 fi
 
-echo "==> pont C"
-# Homebrew expose les en-têtes d'OpenSSL 4 dans /opt/homebrew/include : on lie la même version.
-cmake -S bridge -B build/bridge -DCMAKE_BUILD_TYPE=Release -Wno-dev \
-  -DPYTHON_EXECUTABLE="$PWD/.venv/bin/python" \
-  -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@4)" \
-  -DCMAKE_PREFIX_PATH="$(brew --prefix curl);$(brew --prefix openssl@4)" >/dev/null
-cmake --build build/bridge --target couchcast-bridge -j "$(sysctl -n hw.ncpu)"
+echo "==> pont C ($PLATFORM)"
+cmake -S bridge -B build/bridge "${CMAKE_ARGS[@]}" >/dev/null
+cmake --build build/bridge --target couchcast-bridge -j "$JOBS"
 
 echo "==> serveur Go"
-(cd server && go build -o ../build/couchcast-server .)
+(cd server && go build -trimpath -ldflags "-s -w" -o "../build/couchcast-server$EXE" .)
 
 echo "==> interface"
 (cd web && { [ -d node_modules ] || npm ci; } && npm run build)

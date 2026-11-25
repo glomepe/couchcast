@@ -28,9 +28,16 @@
 #include <chiaki/regist.h>
 #include <chiaki/session.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <fcntl.h>
+#include <io.h>
+#else
 #include <arpa/inet.h>
-#include <getopt.h>
 #include <netdb.h>
+#endif
+#include <getopt.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -494,7 +501,9 @@ static int cmd_stream(const Options *o)
 
 	signal(SIGINT, on_signal);
 	signal(SIGTERM, on_signal);
+#ifdef SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
+#endif
 
 	err = chiaki_session_start(&g_session);
 	if(err != CHIAKI_ERR_SUCCESS)
@@ -525,6 +534,11 @@ int main(int argc, char **argv)
 	if(argc < 2)
 		usage();
 	const char *cmd = argv[1];
+#ifdef _WIN32
+	// Sans mode binaire, Windows convertirait les \n du flux vidéo en \r\n.
+	_setmode(_fileno(stdout), _O_BINARY);
+	_setmode(_fileno(stdin), _O_BINARY);
+#endif
 
 	Options o = { .resolution = 1080, .fps = 60, .timeout = 3.0 };
 	static const struct option long_opts[] = {

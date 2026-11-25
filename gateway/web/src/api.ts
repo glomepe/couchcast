@@ -77,6 +77,8 @@ export interface StudioStatus {
   live: LiveStatus[];
   jobs: Job[];
   mediaDir: string;
+  ffmpeg: boolean;
+  os: string;
 }
 
 export interface LiveDestination {

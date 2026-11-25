@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, formatClock, formatSize, mediaUrl, thumbUrl, type MediaItem, type Status, type VerticalLayout } from './api';
 import { useI18n } from './i18n';
 import { useShortcuts } from './shortcuts';
-import { Segmented } from './ui';
+import { FFmpegWarning, Segmented } from './ui';
 
 type Filter = 'all' | MediaItem['kind'];
 
@@ -67,6 +67,7 @@ export function Library({ status }: { status: Status }) {
         <FolderOpen size={14} /> {status.studio?.mediaDir}
       </p>
 
+      <FFmpegWarning ok={status.studio?.ffmpeg} os={status.studio?.os} t={t} />
       {running.map((j) => (
         <div key={j.id} className="job-line">
           <Loader size={15} className="spin" /> {j.label}…

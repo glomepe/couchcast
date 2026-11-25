@@ -7,6 +7,21 @@
 > [!WARNING]
 > **This project was vibe-coded.** It was built in a few sessions of pair-programming with an AI assistant, tested on exactly one setup (Apple Silicon Mac + PS5 over Wi-Fi), and has no automated test suite worth the name. It works on that setup. It may not work on yours. Read the code before you trust it, and expect rough edges.
 
+## Contents
+
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Download](#download)
+- [Requirements](#requirements)
+- [Build from source](#build-from-source)
+- [First run: pairing](#first-run-pairing)
+- [Keyboard shortcuts](#keyboard-shortcuts)
+- [Latency tips](#latency-tips)
+- [Security & privacy](#security--privacy)
+- [Known limitations](#known-limitations)
+- [Credits](#credits)
+- [License & trademarks](#license--trademarks)
+
 Couchcast speaks the PS5's own **Remote Play** protocol (through [chiaki-ng](https://github.com/streetpea/chiaki-ng)'s library). It forwards the console's H.264 video and Opus audio **as-is** over WebRTC, with no re-encoding, so the extra latency is a few milliseconds and the Mac barely notices.
 
 ## Features
@@ -19,7 +34,7 @@ Couchcast speaks the PS5's own **Remote Play** protocol (through [chiaki-ng](htt
 - **Library** with thumbnails, preview, download, vertical export and Finder integration.
 - **Phone remote**: a mobile page to start the session, record and clip without looking away from the TV.
 - **OBS source**: a clean URL (picture + sound, no UI) to add as a browser source.
-- **macOS desktop app**: menu-bar icon, global shortcuts, notifications, sleep prevention.
+- **Desktop app for macOS and Windows**: menu-bar/tray icon, global shortcuts, notifications, sleep prevention.
 - **French / English** interface, switchable in-app.
 
 ## How it works
@@ -42,27 +57,53 @@ PS5 ──Remote Play (H.264 + Opus)──► couchcast-bridge (C, chiaki-ng lib
 | `gateway/web/` | React UI (Vite): player, settings drawer, library, phone remote, pairing wizard. |
 | `desktop/` | Electron shell: runs the server, menu-bar icon, global shortcuts. |
 
+## Download
+
+Grab the latest build from the **[Releases page](https://github.com/glomepe/couchcast/releases/latest)**:
+
+| System | File |
+|---|---|
+| macOS (Apple Silicon, M1 and later) | `Couchcast-<version>-mac-arm64.dmg` |
+| Windows 10/11 (x64) | `Couchcast-<version>-win-x64.exe` (installer) or `.zip` (portable) |
+
+ffmpeg and every library are bundled. There is nothing else to install.
+
+### Opening the app the first time
+
+The app is **not signed** with an Apple or Microsoft certificate (those cost money), so the system warns you the first time:
+
+- **macOS.** Open the `.dmg` and drag *Couchcast* into *Applications*. Launch it once: macOS refuses. Then go to **System Settings › Privacy & Security**, scroll down to the message about Couchcast and click **Open Anyway**. If macOS says the app “is damaged”, run this once in Terminal:
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/Couchcast.app
+  ```
+- **Windows.** If SmartScreen shows “Windows protected your PC”, click **More info › Run anyway**. Allow Couchcast on **private networks** when the firewall asks: that is how your PS5, phone and OBS reach it.
+
 ## Requirements
 
-- **macOS on Apple Silicon.** That is the only tested platform. The server should be portable to Linux (it is plain C + Go + ffmpeg) except for the VideoToolbox encoder used for vertical exports and re-encoded lives. It has never been tried.
-- [Homebrew](https://brew.sh), **ffmpeg** (`brew install ffmpeg`), **Node.js 22+**, Xcode command-line tools. `build.sh` installs the rest: cmake, Go, protobuf, OpenSSL…
+- **macOS on Apple Silicon** or **Windows 10/11 x64**. Daily use and testing happen on macOS; the Windows build is compiled by CI but has had very little real-world testing.
 - A **PS5** with Remote Play enabled (*Settings › System › Remote Play*).
 - A **secondary PSN account**, signed in on the PS5. See below.
+- For vertical exports and re-encoded live streams, a hardware encoder is used when available: VideoToolbox on Mac; NVENC, Quick Sync or AMF on Windows. Otherwise Couchcast falls back to x264 on the CPU.
 
-## Install
+## Build from source
+
+**macOS**: needs [Homebrew](https://brew.sh), Node.js 22+ and the Xcode command-line tools.
 
 ```sh
-git clone <this repo> couchcast && cd couchcast
+git clone https://github.com/glomepe/couchcast && cd couchcast
 desktop/build-app.sh --install    # builds everything and copies Couchcast.app to /Applications
 ```
 
-The app is not signed. Since you build it yourself, macOS lets it run.
-
-Without the desktop app:
+**Windows**: needs [MSYS2](https://www.msys2.org), [Go](https://go.dev/dl/) and [Node.js 22+](https://nodejs.org). In an **MSYS2 UCRT64** terminal started with the Windows PATH (`MSYS2_PATH_TYPE=inherit`):
 
 ```sh
-cd gateway && ./build.sh && ./run.sh    # then open http://<your-mac-ip>:8765/
+git clone https://github.com/glomepe/couchcast && cd couchcast
+gateway/build.sh && cd desktop && npm ci && ./package.sh    # installer in desktop/dist/
 ```
+
+**Server only** (no desktop app, any browser): `cd gateway && ./build.sh && ./run.sh`, then open `http://<computer-ip>:8765/`. ffmpeg must then be installed and on the PATH (`brew install ffmpeg` / `winget install ffmpeg`).
+
+Releases are produced by the [Build & release](.github/workflows/release.yml) workflow: push a `v*` tag, or run it by hand from the *Actions* tab.
 
 ## First run: pairing
 
@@ -104,7 +145,7 @@ The app and browser add almost nothing: about 2 ms of jitter buffer and about 1 
 - **1080p max.** That is the Remote Play protocol's limit. No HDR (the stream is H.264 SDR for browser compatibility).
 - DRM-protected apps (Netflix…) are not transmitted by Remote Play.
 - Some server-side error messages are only in French.
-- Tested only on macOS 26 / M4 Pro / Chrome-based rendering.
+- Daily use and testing on macOS 26 / M4 Pro. The Windows build compiles in CI but has had little real-world testing.
 
 ## Credits
 

@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +42,8 @@ type StudioStatus struct {
 	Live          []LiveStatus    `json:"live"`
 	Jobs          []Job           `json:"jobs"`
 	MediaDir      string          `json:"mediaDir"`
+	FFmpeg        bool            `json:"ffmpeg"` // ffmpeg trouvé (sinon clips et lives impossibles)
+	OS            string          `json:"os"`
 }
 
 type recording struct {
@@ -69,6 +72,8 @@ type Studio struct {
 	config  *ConfigStore
 	notify  func()
 
+	ffmpegOK bool
+
 	mu    sync.Mutex
 	rec   *recording
 	lives map[string]*liveRun
@@ -85,6 +90,7 @@ func NewStudio(cfg *ConfigStore, lib *Library, notify func()) *Studio {
 		notify:     notify,
 		lives:      map[string]*liveRun{},
 		liveErrors: map[string]string{},
+		ffmpegOK:   ffmpegAvailable(),
 	}
 }
 
@@ -102,7 +108,7 @@ func (s *Studio) Status() StudioStatus {
 	cfg := s.config.Get()
 	secs, bytes := s.capture.ReplayInfo()
 	st := StudioStatus{Settings: cfg.Studio, ReplaySeconds: secs, ReplayMB: float64(bytes) / 1e6,
-		Jobs: s.library.Jobs(), MediaDir: s.library.Dir, Live: []LiveStatus{}}
+		Jobs: s.library.Jobs(), MediaDir: s.library.Dir, Live: []LiveStatus{}, FFmpeg: s.ffmpegOK, OS: runtime.GOOS}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.rec != nil {
@@ -280,11 +286,7 @@ func (s *Studio) liveArgs(d LiveDestination) []string {
 	args := []string{"-hide_banner", "-nostdin", "-v", "error", "-stats_period", "2", "-progress", "pipe:1",
 		"-fflags", "+genpts", "-f", "matroska", "-i", "pipe:0"}
 	audio := []string{"-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-af", "aresample=async=1000"}
-	encode := func(kbps int) []string {
-		k := strconv.Itoa(kbps) + "k"
-		return []string{"-c:v", "h264_videotoolbox", "-realtime", "1", "-profile:v", "high",
-			"-b:v", k, "-maxrate", k, "-bufsize", strconv.Itoa(kbps*2) + "k", "-g", "120", "-pix_fmt", "yuv420p"}
-	}
+	encode := func(kbps int) []string { return encodeArgs(kbps, true) }
 	bitrate := d.Bitrate
 	if bitrate == 0 {
 		bitrate = 6000
@@ -322,7 +324,7 @@ func (s *Studio) StartLive(id string) error {
 	}
 	s.mu.Unlock()
 
-	cmd := exec.Command("ffmpeg", s.liveArgs(*dest)...)
+	cmd := exec.Command(ffmpegBin, s.liveArgs(*dest)...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err

@@ -15,19 +15,22 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
 
 func main() {
 	listen := flag.String("listen", ":8765", "adresse HTTP d'écoute")
-	bridgePath := flag.String("bridge", "build/bridge/couchcast-bridge", "chemin du binaire couchcast-bridge")
+	bridgePath := flag.String("bridge", "build/bridge/"+exe("couchcast-bridge"), "chemin du binaire couchcast-bridge")
 	dataPath := flag.String("config", "data/config.json", "fichier de configuration (console appairée)")
 	webDir := flag.String("web", "web/dist", "dossier de l'interface compilée")
-	home, _ := os.UserHomeDir()
-	mediaDir := flag.String("media", filepath.Join(home, "Movies", "Couchcast"), "dossier des clips et enregistrements")
+	mediaDir := flag.String("media", defaultMediaDir(), "dossier des clips et enregistrements")
+	ffmpegDir := flag.String("ffmpeg-dir", "", "dossier contenant ffmpeg et ffprobe (par défaut : à côté du serveur, sinon le PATH)")
 	flag.Parse()
 
+	locateFFmpeg(*ffmpegDir)
+	go pickEncoder() // test des encodeurs matériels en arrière-plan
 	if _, err := os.Stat(*bridgePath); err != nil {
 		log.Fatalf("couchcast-bridge introuvable (%s) : lancez d'abord ./build.sh", *bridgePath)
 	}
@@ -58,16 +61,23 @@ func main() {
 	mux.Handle("/", spaHandler(*webDir))
 
 	srv := &http.Server{Addr: *listen, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	var shutdownOnce sync.Once
+	shutdown := func() {
+		shutdownOnce.Do(func() {
+			log.Printf("arrêt…")
+			manager.Studio.SessionEnded()
+			manager.Stop() // ferme proprement la session Remote Play
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			_ = srv.Shutdown(ctx)
+		})
+	}
+	api.shutdown = shutdown
 	go func() {
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 		<-ch
-		log.Printf("arrêt…")
-		manager.Studio.SessionEnded()
-		manager.Stop()
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		_ = srv.Shutdown(ctx)
+		shutdown()
 	}()
 
 	_, port, _ := net.SplitHostPort(*listen)
@@ -80,12 +90,13 @@ func main() {
 }
 
 type API struct {
-	manager *Manager
-	viewers *Viewers
-	config  *ConfigStore
-	bridge  Bridge
-	studio  *Studio
-	library *Library
+	manager  *Manager
+	viewers  *Viewers
+	config   *ConfigStore
+	bridge   Bridge
+	studio   *Studio
+	library  *Library
+	shutdown func()
 }
 
 func (a *API) Register(mux *http.ServeMux) {
@@ -126,6 +137,17 @@ func (a *API) Register(mux *http.ServeMux) {
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/webrtc", a.webrtcOffer)
+	// Arrêt propre demandé par l'app de bureau (Windows n'a pas de SIGTERM),
+	// accepté seulement depuis la machine elle-même.
+	mux.HandleFunc("POST /api/shutdown", func(w http.ResponseWriter, r *http.Request) {
+		host, _, _ := net.SplitHostPort(r.RemoteAddr)
+		if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
+			writeError(w, http.StatusForbidden, errors.New("réservé à la machine locale"))
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+		go a.shutdown()
+	})
 	a.registerStudio(mux)
 }
 
