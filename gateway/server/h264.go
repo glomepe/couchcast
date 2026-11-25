@@ -96,31 +96,114 @@ func sliceType(nal []byte) (uint, bool) {
 	return t % 5, ok
 }
 
-type auInfo struct {
-	idr, iSlice, sps, pps bool
-	types                 []byte
+// videoCodec : codec du flux envoyé par la PS5.
+type videoCodec int
+
+const (
+	codecH264 videoCodec = iota
+	codecH265
+)
+
+func parseCodec(s string) videoCodec {
+	if s == "h265" || s == "h265-hdr" {
+		return codecH265
+	}
+	return codecH264
 }
 
-func inspectAU(au []byte) auInfo {
+// nalType renvoie le type d'une NAL (5 bits en H.264, 6 bits en H.265).
+func (c videoCodec) nalType(nal []byte) byte {
+	if c == codecH265 {
+		return (nal[0] >> 1) & 0x3f
+	}
+	return nal[0] & 0x1f
+}
+
+// isParamSet : VPS/SPS/PPS (H.265 : 32-34, H.264 : 7-8).
+func (c videoCodec) isParamSet(t byte) bool {
+	if c == codecH265 {
+		return t >= 32 && t <= 34
+	}
+	return t == 7 || t == 8
+}
+
+// isDelimiter : délimiteur d'unité d'accès (inutile une fois en conteneur).
+func (c videoCodec) isDelimiter(t byte) bool {
+	if c == codecH265 {
+		return t == 35
+	}
+	return t == 9
+}
+
+// isKeyframe : IDR (H.264 : 5 ; H.265 : IDR_W_RADL, IDR_N_LP, CRA).
+func (c videoCodec) isKeyframe(t byte) bool {
+	if c == codecH265 {
+		return t >= 19 && t <= 21
+	}
+	return t == 5
+}
+
+type auInfo struct {
+	idr, iSlice, params bool
+	slices              bool
+	types               []byte
+}
+
+func inspectAU(au []byte, codec videoCodec) auInfo {
 	var info auInfo
 	for _, nal := range splitNALs(au) {
 		if len(nal) == 0 {
 			continue
 		}
-		t := nal[0] & 0x1f
+		t := codec.nalType(nal)
 		info.types = append(info.types, t)
-		switch t {
-		case 5:
-			info.idr = true
-		case 1:
+		switch {
+		case codec.isKeyframe(t):
+			info.idr, info.slices = true, true
+		case codec.isParamSet(t):
+			info.params = true
+		case codec == codecH264 && t == 1:
+			info.slices = true
 			if st, ok := sliceType(nal); ok && st == 2 {
 				info.iSlice = true
 			}
-		case 7:
-			info.sps = true
-		case 8:
-			info.pps = true
+		case codec == codecH265 && t < 32:
+			info.slices = true
 		}
 	}
 	return info
+}
+
+// hvcC : configuration du décodeur H.265 (ISO 14496-15) à partir de VPS/SPS/PPS.
+func hvcC(vps, sps, pps []byte) []byte {
+	if len(sps) < 3 {
+		return nil
+	}
+	rbsp := newBitReader(sps[2:]).data // sans octets d'émulation
+	if len(rbsp) < 13 {
+		return nil
+	}
+	maxSubLayers := (rbsp[0]>>1)&0x07 + 1
+	nested := rbsp[0] & 0x01
+	ptl := rbsp[1:13] // profile_tier_level général : 12 octets
+	bitDepth := byte(8)
+	if ptl[0]&0x1f == 2 { // profil Main 10 (HDR)
+		bitDepth = 10
+	}
+	b := []byte{1}
+	b = append(b, ptl[0])
+	b = append(b, ptl[1:5]...)  // compatibilité de profil
+	b = append(b, ptl[5:11]...) // contraintes
+	b = append(b, ptl[11])      // niveau
+	b = append(b, 0xF0, 0x00, 0xFC, 0xFD, 0xF8|(bitDepth-8), 0xF8|(bitDepth-8), 0, 0)
+	b = append(b, maxSubLayers<<3|nested<<2|3) // longueur des NAL sur 4 octets
+	b = append(b, 3)
+	for _, n := range []struct {
+		t   byte
+		nal []byte
+	}{{32, vps}, {33, sps}, {34, pps}} {
+		b = append(b, 0x80|n.t, 0, 1, byte(len(n.nal)>>8), byte(len(n.nal)))
+		b = append(b, n.nal...)
+	}
+	return b
 }

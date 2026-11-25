@@ -24,12 +24,22 @@ type MKVWriter struct {
 	clusterStart int64
 	hasCluster   bool
 	err          error
+	codec        videoCodec
+}
+
+// paramSets : NAL de paramètres du flux vidéo (bruts, sans code de début).
+type paramSets struct {
+	vps, sps, pps []byte
 }
 
 // NewMKVWriter écrit l'en-tête (EBML, Segment de taille inconnue, Info, Tracks).
-// sps et pps sont les NAL bruts (sans code de début).
-func NewMKVWriter(w io.Writer, width, height int, sps, pps []byte) (*MKVWriter, error) {
-	m := &MKVWriter{w: w}
+// params contient les NAL de paramètres bruts (H.264 : SPS, PPS ; H.265 : VPS, SPS, PPS).
+func NewMKVWriter(w io.Writer, width, height int, codec videoCodec, params paramSets) (*MKVWriter, error) {
+	m := &MKVWriter{w: w, codec: codec}
+	codecID, private := "V_MPEG4/ISO/AVC", avcC(params.sps, params.pps)
+	if codec == codecH265 {
+		codecID, private = "V_MPEGH/ISO/HEVC", hvcC(params.vps, params.sps, params.pps)
+	}
 	var head bytes.Buffer
 	head.Write(ebml(0x1A45DFA3,
 		ebmlUint(0x4286, 1), ebmlUint(0x42F7, 1), ebmlUint(0x42F2, 4), ebmlUint(0x42F3, 8),
@@ -42,7 +52,7 @@ func NewMKVWriter(w io.Writer, width, height int, sps, pps []byte) (*MKVWriter, 
 	head.Write(ebml(0x1654AE6B,
 		ebml(0xAE,
 			ebmlUint(0xD7, mkvTrackVideo), ebmlUint(0x73C5, mkvTrackVideo), ebmlUint(0x83, 1),
-			ebmlString(0x86, "V_MPEG4/ISO/AVC"), ebmlBytes(0x63A2, avcC(sps, pps)),
+			ebmlString(0x86, codecID), ebmlBytes(0x63A2, private),
 			ebml(0xE0, ebmlUint(0xB0, uint64(width)), ebmlUint(0xBA, uint64(height)))),
 		ebml(0xAE,
 			ebmlUint(0xD7, mkvTrackAudio), ebmlUint(0x73C5, mkvTrackAudio), ebmlUint(0x83, 2),
@@ -62,9 +72,9 @@ func (m *MKVWriter) WriteVideo(au []byte, ms int64, keyframe bool) error {
 	}
 	var data bytes.Buffer
 	for _, nal := range splitNALs(au) {
-		t := nal[0] & 0x1f
-		if t == 7 || t == 8 || t == 9 {
-			continue // SPS/PPS sont dans CodecPrivate, les délimiteurs sont inutiles
+		t := m.codec.nalType(nal)
+		if m.codec.isParamSet(t) || m.codec.isDelimiter(t) {
+			continue // paramètres dans CodecPrivate, délimiteurs inutiles
 		}
 		var l [4]byte
 		binary.BigEndian.PutUint32(l[:], uint32(len(nal)))

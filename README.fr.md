@@ -26,7 +26,8 @@ Couchcast parle le protocole **Remote Play** de la PS5 (via la bibliothèque de 
 
 ## Fonctionnalités
 
-- **Lecteur basse latence.** 1080p60 dans n'importe quel navigateur Chromium ou dans l'app de bureau, avec environ 2 ms de tampon navigateur en plus du ping réseau.
+- **Lecteur basse latence.** 1080p60 en H.264, H.265 ou **H.265 HDR**, avec environ 2 ms de tampon navigateur en plus du ping réseau. Décomposition de la latence et conseils intégrés.
+- **Calibrage de l'image** comme dans les jeux : une mire par réglage (noirs, blancs, couleurs, netteté).
 - **Replay et clips.** Les dernières minutes restent en mémoire. <kbd>C</kbd> (ou <kbd>⌃⌥C</kbd> depuis n'importe où) sauvegarde les 30 dernières secondes ; des clips de 15 s à 5 min sont possibles.
 - **Enregistrement sans perte** : le flux de la PS5 est copié tel quel sur le disque.
 - **Exports verticaux 9:16** pour TikTok, Reels et Shorts : *fond flou* ou *recadré* (position réglable), encodés par VideoToolbox.
@@ -142,7 +143,8 @@ L'app et le navigateur n'ajoutent presque rien : environ 2 ms de tampon et envir
 
 ## Limites connues
 
-- **1080p maximum** : c'est la limite du protocole Remote Play. Pas de HDR (le flux est en H.264 SDR pour rester compatible avec les navigateurs).
+- **1080p maximum.** Testé : demander du 1440p ou de la 4K à la PS5, en H.264 comme en H.265, est refusé par la console elle-même (`AvCap failed to initialize video`). La limite est dans le firmware de la PS5.
+- **H.265 et HDR** sont disponibles (Réglages › Flux › Codec) : image plus fine à débit égal, et HDR10 sur un écran HDR. Il faut l'app de bureau ou un Chrome/Edge récent ; le H.264 passe partout.
 - Les applis protégées par DRM (Netflix…) ne sont pas transmises par Remote Play.
 - Certains messages d'erreur du serveur n'existent qu'en français.
 - Usage et tests au quotidien sous macOS 26 / M4 Pro. La version Windows compile dans la CI mais a encore peu servi en conditions réelles.

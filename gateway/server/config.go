@@ -24,6 +24,8 @@ type StreamSettings struct {
 	Resolution int `json:"resolution"` // 360, 540, 720, 1080
 	FPS        int `json:"fps"`        // 30, 60
 	Bitrate    int `json:"bitrate"`    // kbit/s, 0 = valeur par défaut de la résolution
+	// Codec demandé à la PS5 : h264 (tous navigateurs), h265 (meilleure image), h265-hdr (HDR10).
+	Codec string `json:"codec"`
 	// Pilotage : si faux, la passerelle n'annonce aucune manette et la manette de la PS5 reste active.
 	Control bool `json:"control"`
 }
@@ -127,6 +129,11 @@ func (s StreamSettings) Validate() error {
 	case 360, 540, 720, 1080:
 	default:
 		return errors.New("résolution invalide (360, 540, 720 ou 1080)")
+	}
+	switch s.Codec {
+	case "", "h264", "h265", "h265-hdr":
+	default:
+		return errors.New("codec invalide (h264, h265 ou h265-hdr)")
 	}
 	if s.FPS != 30 && s.FPS != 60 {
 		return errors.New("fps invalide (30 ou 60)")

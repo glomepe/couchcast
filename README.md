@@ -26,7 +26,8 @@ Couchcast speaks the PS5's own **Remote Play** protocol (through [chiaki-ng](htt
 
 ## Features
 
-- **Low-latency player.** 1080p60 in any Chromium browser or in the desktop app, typically 2 ms of browser buffering plus network ping.
+- **Low-latency player.** 1080p60 in H.264, H.265 or **H.265 HDR**, typically 2 ms of browser buffering plus network ping. Built-in latency breakdown and tips.
+- **Picture calibration** like in games: one test pattern per setting (black level, white level, colour, sharpness).
 - **Replay buffer & clips.** The last N minutes stay in RAM. Hit <kbd>C</kbd> (or <kbd>⌃⌥C</kbd> from anywhere) to save the last 30 s; clips from 15 s to 5 min are available.
 - **Recording** with no quality loss: the PS5 stream is copied straight to disk.
 - **Vertical 9:16 exports** for TikTok, Reels and Shorts: *blurred background* or *cropped* (adjustable position), encoded with VideoToolbox.
@@ -142,7 +143,8 @@ The app and browser add almost nothing: about 2 ms of jitter buffer and about 1 
 
 ## Known limitations
 
-- **1080p max.** That is the Remote Play protocol's limit. No HDR (the stream is H.264 SDR for browser compatibility).
+- **1080p max.** Tested: asking the PS5 for 1440p or 4K, in H.264 or H.265, is refused by the console itself (`AvCap failed to initialize video`). The limit is in the PS5 firmware.
+- **H.265 and HDR** are available (Settings › Stream › Codec): sharper at the same bitrate, and HDR10 on an HDR display. They need the desktop app or a recent Chrome/Edge; H.264 plays everywhere.
 - DRM-protected apps (Netflix…) are not transmitted by Remote Play.
 - Some server-side error messages are only in French.
 - Daily use and testing on macOS 26 / M4 Pro. The Windows build compiles in CI but has had little real-world testing.

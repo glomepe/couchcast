@@ -5,7 +5,7 @@ import { Drawer, type DrawerTab } from './Drawer';
 import { startGamepadLoop } from './gamepad';
 import { useI18n } from './i18n';
 import { useRefreshRate } from './display';
-import { cssFilter, sharpenKernel, useImageSettings } from './image';
+import { ImageFilterDefs, cssFilter, useImageSettings } from './image';
 import { ShortcutHelp, useShortcuts, type ShortcutAction } from './shortcuts';
 import { ClipButton, PingMeter, RecButton, clip, toggleRecording } from './studio/Controls';
 import { IconButton, Kbd } from './ui';
@@ -64,6 +64,16 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
   useEffect(() => {
     if (rtcState === 'failed') disconnect();
   }, [rtcState, disconnect]);
+
+  // Changement de codec : la piste vidéo change côté serveur, il faut renégocier.
+  const codec = status.settings.codec || 'h264';
+  const codecRef = useRef(codec);
+  useEffect(() => {
+    if (codecRef.current !== codec) {
+      codecRef.current = codec;
+      if (viewerRef.current) disconnect();
+    }
+  }, [codec, disconnect]);
 
   useEffect(() => disconnect, [disconnect]);
 
@@ -186,11 +196,7 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
 
   return (
     <div className={`player ${chromeHidden ? 'chrome-hidden' : ''}`}>
-      <svg width="0" height="0" aria-hidden style={{ position: 'absolute' }}>
-        <filter id="cc-sharpen" colorInterpolationFilters="sRGB">
-          <feConvolveMatrix order="3" kernelMatrix={sharpenKernel(image.sharpness)} preserveAlpha="true" />
-        </filter>
-      </svg>
+      <ImageFilterDefs s={image} />
       <video
         ref={videoRef}
         autoPlay

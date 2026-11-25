@@ -49,7 +49,8 @@ func (v *Viewers) Answer(offerSDP string) (string, error) {
 		return "", err
 	}
 
-	for _, track := range []webrtc.TrackLocal{v.manager.Video, v.manager.Audio} {
+	video := v.manager.VideoTrack(parseCodec(v.manager.config.Get().Settings.Codec))
+	for _, track := range []webrtc.TrackLocal{video, v.manager.Audio} {
 		sender, err := pc.AddTrack(track)
 		if err != nil {
 			return fail(err)

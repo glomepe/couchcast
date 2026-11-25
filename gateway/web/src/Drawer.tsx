@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { api, formatClock, type LiveDestination, type LiveStatus, type Status, type StreamSettings, type StudioSettings } from './api';
 import { useI18n } from './i18n';
 import { useRefreshRate } from './display';
+import { Calibration } from './Calibration';
 import { NEUTRAL, PRESETS, setImageSettings, useImageSettings, type ImageSettings } from './image';
 import { ShortcutList } from './shortcuts';
 import { useElapsed } from './studio/Controls';
@@ -50,7 +51,7 @@ export function Drawer({ status, tab, onTab, onClose }: { status: Status; tab: D
       <div className="drawer-body" key={tab}>
         {(tab === 'clips' || tab === 'live') && <FFmpegWarning ok={status.studio?.ffmpeg} os={status.studio?.os} t={t} />}
         {tab === 'stream' && <StreamTab status={status} />}
-        {tab === 'image' && <ImageTab />}
+        {tab === 'image' && <ImageTab hdr={status.settings.codec === 'h265-hdr'} />}
         {tab === 'clips' && status.studio && <ClipsTab settings={status.studio.settings} replayMB={status.studio.replayMB} available={status.studio.replaySeconds} />}
         {tab === 'live' && <LiveTab status={status} />}
         {tab === 'links' && <LinksTab />}
@@ -58,6 +59,15 @@ export function Drawer({ status, tab, onTab, onClose }: { status: Status; tab: D
       </div>
     </aside>
   );
+}
+
+/** Le navigateur sait-il recevoir du H.265 en WebRTC ? */
+function supportsH265(): boolean {
+  try {
+    return (RTCRtpReceiver.getCapabilities('video')?.codecs ?? []).some((c) => c.mimeType.toLowerCase() === 'video/h265');
+  } catch {
+    return false;
+  }
 }
 
 // --- Flux ----------------------------------------------------------------------
@@ -99,6 +109,19 @@ function StreamTab({ status }: { status: Status }) {
           ))}
         </select>
       </Field>
+      <Field label={t('stream.codec')} hint={t('stream.codecHint')}>
+        <Segmented
+          value={s.codec || 'h264'}
+          onChange={(codec) => setS({ ...s, codec })}
+          items={[
+            { id: 'h264' as const, label: 'H.264' },
+            { id: 'h265' as const, label: 'H.265' },
+            { id: 'h265-hdr' as const, label: 'H.265 HDR' },
+          ]}
+        />
+      </Field>
+      {(s.codec === 'h265' || s.codec === 'h265-hdr') && !supportsH265() && <p className="error small">{t('stream.codecUnsupported')}</p>}
+      {s.codec === 'h265-hdr' && !matchMedia('(dynamic-range: high)').matches && <p className="hint">{t('stream.hdrUnsupported')}</p>}
       <Toggle checked={s.control} onChange={(v) => setS({ ...s, control: v })} label={t('stream.control')} hint={t('stream.controlHint')} />
       <div className="row">
         <button className="btn primary" disabled={!dirty} onClick={save}>
@@ -158,12 +181,14 @@ function LatencyTips({ status }: { status: Status }) {
 
 // --- Image ---------------------------------------------------------------------
 
-function ImageTab() {
+function ImageTab({ hdr }: { hdr: boolean }) {
   const { t } = useI18n();
   const s = useImageSettings();
+  const [calibrating, setCalibrating] = useState(false);
   const set = (patch: Partial<ImageSettings>) => setImageSettings({ ...s, ...patch });
   const preset = (Object.keys(PRESETS) as Array<keyof typeof PRESETS>).find((k) => JSON.stringify(PRESETS[k]) === JSON.stringify(s));
   const sliders: Array<{ key: keyof ImageSettings; label: string; min: number; max: number; fmt: (v: number) => string }> = [
+    { key: 'gamma', label: t('image.gamma'), min: 0.6, max: 1.4, fmt: (v) => `${Math.round((2 - v) * 100)} %` },
     { key: 'brightness', label: t('image.brightness'), min: 0.7, max: 1.3, fmt: (v) => `${Math.round(v * 100)} %` },
     { key: 'contrast', label: t('image.contrast'), min: 0.7, max: 1.4, fmt: (v) => `${Math.round(v * 100)} %` },
     { key: 'saturation', label: t('image.saturation'), min: 0, max: 2, fmt: (v) => `${Math.round(v * 100)} %` },
@@ -172,6 +197,12 @@ function ImageTab() {
   return (
     <div className="stack">
       <p className="hint">{t('image.intro')}</p>
+      <button className="btn primary" onClick={() => setCalibrating(true)}>
+        <SunMedium size={16} /> {t('image.calibrate')}
+      </button>
+      <p className="hint">{t('image.calibrateHint')}</p>
+      {hdr && <p className="hint warn-text">{t('image.hdrNote')}</p>}
+      {calibrating && <Calibration onClose={() => setCalibrating(false)} />}
       <Field label={t('image.presets')}>
         <Segmented
           value={preset ?? ('custom' as never)}

@@ -62,6 +62,9 @@ typedef struct {
 	double timeout;
 	bool verbose;
 	bool spectator;
+	int width;
+	int height;
+	const char *codec;
 } Options;
 
 static ChiakiLog g_log;
@@ -476,8 +479,18 @@ static int cmd_stream(const Options *o)
 	chiaki_connect_video_profile_preset(&info.video_profile, res, o->fps == 30 ? CHIAKI_VIDEO_FPS_PRESET_30 : CHIAKI_VIDEO_FPS_PRESET_60);
 	if(o->bitrate > 0)
 		info.video_profile.bitrate = (unsigned)o->bitrate;
-	// H.264 : seul codec décodable par tous les navigateurs en WebRTC.
+	// Résolution libre (au-delà des préréglages) : c'est la PS5 qui décide de l'accepter.
+	if(o->width > 0 && o->height > 0)
+	{
+		info.video_profile.width = (unsigned)o->width;
+		info.video_profile.height = (unsigned)o->height;
+	}
+	// H.264 par défaut : seul codec décodable par tous les navigateurs en WebRTC.
 	info.video_profile.codec = CHIAKI_CODEC_H264;
+	if(o->codec && strcmp(o->codec, "h265") == 0)
+		info.video_profile.codec = CHIAKI_CODEC_H265;
+	else if(o->codec && strcmp(o->codec, "h265-hdr") == 0)
+		info.video_profile.codec = CHIAKI_CODEC_H265_HDR;
 	info.video_profile_auto_downgrade = true;
 	info.enable_keyboard = false;
 	info.enable_dualsense = false;
@@ -553,6 +566,9 @@ int main(int argc, char **argv)
 		{ "timeout", required_argument, 0, 't' },
 		{ "verbose", no_argument, 0, 'v' },
 		{ "spectator", no_argument, 0, 's' },
+		{ "width", required_argument, 0, 'W' },
+		{ "height", required_argument, 0, 'H' },
+		{ "codec", required_argument, 0, 'c' },
 		{ 0, 0, 0, 0 },
 	};
 	optind = 2;
@@ -572,6 +588,9 @@ int main(int argc, char **argv)
 			case 't': o.timeout = atof(optarg); break;
 			case 'v': o.verbose = true; break;
 			case 's': o.spectator = true; break;
+			case 'W': o.width = atoi(optarg); break;
+			case 'H': o.height = atoi(optarg); break;
+			case 'c': o.codec = optarg; break;
 			default: usage();
 		}
 	}

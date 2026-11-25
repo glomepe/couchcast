@@ -28,7 +28,8 @@ type gop struct {
 
 type Capture struct {
 	mu        sync.Mutex
-	sps, pps  []byte
+	codec     videoCodec
+	params    paramSets
 	width     int
 	height    int
 	ring      []*gop
@@ -56,15 +57,20 @@ func (c *Capture) Reset() {
 	c.mu.Unlock()
 }
 
-func (c *Capture) SetParamSets(au []byte, width, height int) {
+func (c *Capture) SetParamSets(au []byte, codec videoCodec, width, height int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if codec != c.codec {
+		c.codec, c.params = codec, paramSets{}
+	}
 	for _, nal := range splitNALs(au) {
-		switch nal[0] & 0x1f {
-		case 7:
-			c.sps = append([]byte(nil), nal...)
-		case 8:
-			c.pps = append([]byte(nil), nal...)
+		switch t := codec.nalType(nal); {
+		case codec == codecH265 && t == 32:
+			c.params.vps = append([]byte(nil), nal...)
+		case (codec == codecH265 && t == 33) || (codec == codecH264 && t == 7):
+			c.params.sps = append([]byte(nil), nal...)
+		case (codec == codecH265 && t == 34) || (codec == codecH264 && t == 8):
+			c.params.pps = append([]byte(nil), nal...)
 		}
 	}
 	if width > 0 {
@@ -137,7 +143,7 @@ var errNoVideo = errors.New("aucune image reçue de la PS5 pour l'instant")
 // WriteReplay écrit dans w les `seconds` dernières secondes (à partir d'une image clé).
 func (c *Capture) WriteReplay(w io.Writer, seconds float64) (float64, error) {
 	c.mu.Lock()
-	if len(c.ring) == 0 || c.sps == nil {
+	if len(c.ring) == 0 || c.params.sps == nil {
 		c.mu.Unlock()
 		return 0, errNoVideo
 	}
@@ -154,10 +160,10 @@ func (c *Capture) WriteReplay(w io.Writer, seconds float64) (float64, error) {
 	}
 	origin := c.ring[start].startMs
 	got := float64(c.lastMs-origin) / 1000
-	sps, pps, width, height := c.sps, c.pps, c.width, c.height
+	codec, params, width, height := c.codec, c.params, c.width, c.height
 	c.mu.Unlock()
 
-	mw, err := NewMKVWriter(w, width, height, sps, pps)
+	mw, err := NewMKVWriter(w, width, height, codec, params)
 	if err != nil {
 		return 0, err
 	}
@@ -189,17 +195,17 @@ type sink struct {
 // Le canal renvoyé reçoit l'erreur finale quand la sortie s'arrête.
 func (c *Capture) AddSink(w io.Writer) (*sink, error) {
 	c.mu.Lock()
-	if c.sps == nil {
+	if c.params.sps == nil {
 		c.mu.Unlock()
 		return nil, errNoVideo
 	}
 	s := &sink{ch: make(chan mediaPacket, 4096), done: make(chan error, 1)}
-	sps, pps, width, height := c.sps, c.pps, c.width, c.height
+	codec, params, width, height := c.codec, c.params, c.width, c.height
 	c.sinks[s] = struct{}{}
 	c.mu.Unlock()
 
 	go func() {
-		mw, err := NewMKVWriter(w, width, height, sps, pps)
+		mw, err := NewMKVWriter(w, width, height, codec, params)
 		for p := range s.ch {
 			if err != nil {
 				continue // on vide le canal jusqu'à la fermeture
@@ -255,6 +261,13 @@ func (c *Capture) fanOutLocked(p mediaPacket) {
 			log.Printf("sortie en retard : images sautées jusqu'à la prochaine image clé")
 		}
 	}
+}
+
+// Codec : codec du flux en cours (pour adapter remux et live).
+func (c *Capture) Codec() videoCodec {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.codec
 }
 
 func (c *Capture) SinkCount() int {

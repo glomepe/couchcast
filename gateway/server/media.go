@@ -217,15 +217,19 @@ func timestampName(prefix string) string {
 
 // Finalize convertit un MKV brut en MP4 lisible partout (vidéo copiée, audio en AAC),
 // génère la miniature, puis lance l'export vertical si demandé.
-func (l *Library) Finalize(mkvPath, baseName string, vertical *VerticalLayout) (string, error) {
+func (l *Library) Finalize(mkvPath, baseName string, codec videoCodec, vertical *VerticalLayout) (string, error) {
 	defer os.Remove(mkvPath)
 	name := baseName + ".mp4"
 	out := filepath.Join(l.Dir, name)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	// L'horloge des paquets est celle de leur réception : aresample lisse l'audio.
-	if err := ffmpeg(ctx, "-i", mkvPath, "-map", "0:v", "-map", "0:a?", "-c:v", "copy",
-		"-af", "aresample=async=1000", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out); err != nil {
+	args := []string{"-i", mkvPath, "-map", "0:v", "-map", "0:a?", "-c:v", "copy"}
+	if codec == codecH265 {
+		args = append(args, "-tag:v", "hvc1") // H.265 lisible par QuickTime/Photos ; HDR conservé
+	}
+	args = append(args, "-af", "aresample=async=1000", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out)
+	if err := ffmpeg(ctx, args...); err != nil {
 		return "", err
 	}
 	l.thumbnail(name)

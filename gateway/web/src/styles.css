@@ -442,3 +442,29 @@ details .row { margin-top: 10px; }
 .tips ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--text); font-size: 13.5px; }
 .tips li::marker { color: var(--warn); }
 .ok-line { color: var(--ok); font-size: 13.5px; }
+
+/* --- Calibrage --- */
+.warn-text { color: var(--warn) !important; }
+.calibration { position: fixed; inset: 0; z-index: 80; display: grid; grid-template-columns: 1fr 380px; background: #000; animation: fade 0.2s; }
+.cal-stage { position: relative; overflow: hidden; }
+.cal-pattern { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 9vw; }
+.cal-mark { display: grid; place-items: center; border-radius: 50%; border: 14px solid; }
+.cal-mark span { width: 40%; height: 40%; border-radius: 50%; }
+.cal-pattern.colors { flex-direction: column; gap: 0; }
+.cal-pattern.colors .bars { display: flex; width: 100%; flex: 2; }
+.cal-pattern.colors .skins { display: flex; width: 100%; flex: 1; }
+.cal-pattern.colors i { flex: 1; }
+.cal-pattern.game video { width: 200%; height: 200%; object-fit: cover; transform: translate(0, 0); }
+.cal-pattern.game { overflow: hidden; }
+.cal-pattern .lines { display: flex; gap: 0; width: 60%; height: 50%; }
+.cal-pattern .lines i { flex: 1; background: #fff; }
+.cal-pattern .lines i:nth-child(odd) { background: #000; }
+.cal-panel { display: grid; align-content: center; gap: 16px; padding: 32px; background: var(--panel-solid); border-left: 1px solid var(--line); }
+.cal-panel h2 { font-size: 28px; }
+.cal-panel p { color: var(--muted); }
+.cal-steps { display: flex; gap: 8px; }
+.cal-steps button { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line-2); background: none; color: var(--muted); font: 600 12px var(--font-mono); display: grid; place-items: center; }
+.cal-steps button.is-active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.cal-steps button.is-done { color: var(--ok); border-color: var(--ok); }
+.cal-panel input[type='range'] { width: 100%; height: 28px; }
+@media (max-width: 800px) { .calibration { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .cal-panel { border-left: none; border-top: 1px solid var(--line); } }

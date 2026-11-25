@@ -138,6 +138,9 @@ func (b Bridge) Stream(c Console, s StreamSettings, h StreamHandler) (*StreamPro
 	if !s.Control {
 		args = append(args, "--spectator")
 	}
+	if s.Codec != "" {
+		args = append(args, "--codec", s.Codec)
+	}
 	cmd := exec.Command(b.Path, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

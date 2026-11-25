@@ -73,8 +73,9 @@ type Manager struct {
 	Studio *Studio
 	Pinger Pinger
 
-	Video *webrtc.TrackLocalStaticSample
-	Audio *webrtc.TrackLocalStaticSample
+	Video     *webrtc.TrackLocalStaticSample // H.264
+	VideoH265 *webrtc.TrackLocalStaticSample
+	Audio     *webrtc.TrackLocalStaticSample
 
 	mu              sync.Mutex
 	state           State
@@ -99,7 +100,8 @@ type Manager struct {
 	framesLost   int64
 	lastStats    Stats
 	lastVideoTs  time.Duration
-	paramSets    []byte // dernier SPS/PPS reçu (Annex-B)
+	paramSets    []byte     // derniers paramètres reçus (SPS/PPS, et VPS en H.265), Annex-B
+	codec        videoCodec // codec de la session en cours
 	audioFrameMs time.Duration
 }
 
@@ -110,13 +112,19 @@ func NewManager(b Bridge, cfg *ConfigStore) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
+	videoH265, err := webrtc.NewTrackLocalStaticSample(
+		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH265, ClockRate: 90000},
+		"video", "ps5-video")
+	if err != nil {
+		return nil, err
+	}
 	audio, err := webrtc.NewTrackLocalStaticSample(
 		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 2},
 		"audio", "ps5-audio")
 	if err != nil {
 		return nil, err
 	}
-	m := &Manager{bridge: b, config: cfg, Video: video, Audio: audio,
+	m := &Manager{bridge: b, config: cfg, Video: video, VideoH265: videoH265, Audio: audio,
 		subs: map[chan Status]struct{}{}, audioFrameMs: 10 * time.Millisecond}
 	m.state = StateIdle
 	if cfg.Get().Console == nil {
@@ -302,6 +310,7 @@ func (m *Manager) connect(ctx context.Context, c Console, s StreamSettings) {
 	m.framesLost = 0
 	m.lastVideoTs = 0
 	m.paramSets = nil
+	m.codec = parseCodec(s.Codec)
 	m.statsMu.Unlock()
 }
 
@@ -439,17 +448,20 @@ func (m *Manager) OnVideo(au []byte, ts time.Duration) {
 	// La PS5 n'envoie SPS/PPS qu'une fois, seuls, en début de session. Après une perte,
 	// le décodeur matériel du navigateur est réinitialisé et ne peut repartir que sur
 	// une IDR précédée de SPS/PPS : on les garde et on les recolle devant chaque IDR.
-	info := inspectAU(au)
-	if (info.sps || info.pps) && !info.idr && !info.iSlice && len(info.types) <= 3 {
+	m.statsMu.Lock()
+	codec := m.codec
+	m.statsMu.Unlock()
+	info := inspectAU(au, codec)
+	if info.params && !info.slices {
 		m.statsMu.Lock()
 		m.paramSets = append([]byte(nil), au...)
 		m.statsMu.Unlock()
 		if m.Studio != nil {
-			m.Studio.capture.SetParamSets(au, 0, 0)
+			m.Studio.capture.SetParamSets(au, codec, 0, 0)
 		}
 		return
 	}
-	if info.idr && !info.sps {
+	if info.idr && !info.params {
 		m.statsMu.Lock()
 		if m.paramSets != nil {
 			au = append(append(make([]byte, 0, len(m.paramSets)+len(au)), m.paramSets...), au...)
@@ -457,12 +469,20 @@ func (m *Manager) OnVideo(au []byte, ts time.Duration) {
 		m.statsMu.Unlock()
 	}
 
-	if err := m.Video.WriteSample(media.Sample{Data: au, Duration: dur}); err != nil {
+	if err := m.VideoTrack(codec).WriteSample(media.Sample{Data: au, Duration: dur}); err != nil {
 		log.Printf("écriture vidéo : %v", err)
 	}
 	if m.Studio != nil {
 		m.Studio.capture.OnVideo(au, ts.Milliseconds(), info.idr)
 	}
+}
+
+// VideoTrack : piste WebRTC correspondant au codec.
+func (m *Manager) VideoTrack(c videoCodec) *webrtc.TrackLocalStaticSample {
+	if c == codecH265 {
+		return m.VideoH265
+	}
+	return m.Video
 }
 
 func (m *Manager) OnAudio(pkt []byte, ts time.Duration) {

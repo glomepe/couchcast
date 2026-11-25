@@ -167,6 +167,7 @@ func (s *Studio) Clip(seconds float64) (*Job, error) {
 		return nil, err
 	}
 	// La copie depuis la mémoire est immédiate : le clip couvre bien l'instant du clic.
+	codec := s.capture.Codec()
 	got, err := s.capture.WriteReplay(tmp, seconds)
 	tmp.Close()
 	if err != nil {
@@ -179,7 +180,7 @@ func (s *Studio) Clip(seconds float64) (*Job, error) {
 	}
 	label := fmt.Sprintf("Clip %s", formatDuration(got))
 	return s.library.startJob("clip", label, func() (string, error) {
-		return s.library.Finalize(tmp.Name(), timestampName("clip"), vertical)
+		return s.library.Finalize(tmp.Name(), timestampName("clip"), codec, vertical)
 	}), nil
 }
 
@@ -235,6 +236,7 @@ func (s *Studio) StopRecording() (*Job, error) {
 	if rec == nil {
 		return nil, errors.New("aucun enregistrement en cours")
 	}
+	codec := s.capture.Codec()
 	werr := s.capture.RemoveSink(rec.sink)
 	rec.file.Close()
 	if werr != nil {
@@ -242,7 +244,7 @@ func (s *Studio) StopRecording() (*Job, error) {
 	}
 	label := "Enregistrement " + formatDuration(time.Since(rec.startedAt).Seconds())
 	return s.library.startJob("recording", label, func() (string, error) {
-		return s.library.Finalize(rec.file.Name(), timestampName("enregistrement"), nil)
+		return s.library.Finalize(rec.file.Name(), timestampName("enregistrement"), codec, nil)
 	}), nil
 }
 
@@ -310,7 +312,7 @@ func (s *Studio) liveArgs(d LiveDestination) []string {
 		args = append(args, encode(bitrate)...)
 	} else {
 		args = append(args, "-map", "0:v", "-map", "0:a?")
-		if d.Reencode {
+		if d.Reencode || s.capture.Codec() == codecH265 { // Twitch & co. attendent du H.264
 			args = append(args, encode(bitrate)...)
 		} else {
 			args = append(args, "-c:v", "copy")

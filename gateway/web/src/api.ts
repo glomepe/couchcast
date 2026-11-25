@@ -7,6 +7,7 @@ export interface StreamSettings {
   fps: 30 | 60;
   bitrate: number; // kbit/s, 0 = auto
   control: boolean; // la passerelle annonce une manette à la PS5 (déloge la manette locale)
+  codec?: '' | 'h264' | 'h265' | 'h265-hdr';
 }
 
 export interface Status {
