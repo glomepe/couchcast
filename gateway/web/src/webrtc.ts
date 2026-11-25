@@ -19,11 +19,16 @@ export interface ViewerStats {
 export interface Viewer {
   pc: RTCPeerConnection;
   gamepad: RTCDataChannel;
+  audio: RTCDataChannel | null; // son basse latence (sinon : piste audio WebRTC classique)
   close(): void;
   stats(): Promise<ViewerStats>;
 }
 
-export async function connectViewer(video: HTMLVideoElement, onState: (s: RTCPeerConnectionState) => void): Promise<Viewer> {
+export async function connectViewer(
+  video: HTMLVideoElement,
+  onState: (s: RTCPeerConnectionState) => void,
+  opts: { lowLatencyAudio?: boolean } = {},
+): Promise<Viewer> {
   const pc = new RTCPeerConnection();
   const stream = new MediaStream();
   video.srcObject = stream;
@@ -40,6 +45,9 @@ export async function connectViewer(video: HTMLVideoElement, onState: (s: RTCPee
 
   // Canal non fiable et non ordonné : seul le dernier état de la manette compte.
   const gamepad = pc.createDataChannel('gamepad', { ordered: false, maxRetransmits: 0 });
+  // Son : un paquet perdu vaut mieux qu'un paquet en retard.
+  const audio = opts.lowLatencyAudio ? pc.createDataChannel('audio', { ordered: false, maxRetransmits: 0 }) : null;
+  if (audio) audio.binaryType = 'arraybuffer';
 
   await pc.setLocalDescription(await pc.createOffer());
   await iceGatheringComplete(pc);
@@ -59,6 +67,7 @@ export async function connectViewer(video: HTMLVideoElement, onState: (s: RTCPee
   return {
     pc,
     gamepad,
+    audio,
     close: () => pc.close(),
     async stats() {
       const report = await pc.getStats();

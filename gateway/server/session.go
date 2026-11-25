@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
@@ -93,8 +94,12 @@ type Manager struct {
 	lastIDR         time.Time
 	lastPeriodicIDR time.Time
 	inUseRetries    int // tentatives après « Remote Play déjà utilisé »
-	subs            map[chan Status]struct{}
-	cancelWake      context.CancelFunc
+
+	audioMu       sync.Mutex
+	audioChannels map[*webrtc.DataChannel]struct{}
+	audioSeq      uint16
+	subs          map[chan Status]struct{}
+	cancelWake    context.CancelFunc
 
 	// Compteurs de la fenêtre courante (une seconde).
 	statsMu      sync.Mutex
@@ -537,6 +542,42 @@ func (m *Manager) OnAudio(pkt []byte, ts time.Duration) {
 	m.statsMu.Unlock()
 	if err := m.Audio.WriteSample(media.Sample{Data: pkt, Duration: dur}); err != nil {
 		log.Printf("écriture audio : %v", err)
+	}
+	m.sendLowLatencyAudio(pkt)
+}
+
+// --- Son basse latence (canal de données) -------------------------------------
+
+func (m *Manager) addAudioChannel(dc *webrtc.DataChannel) {
+	m.audioMu.Lock()
+	if m.audioChannels == nil {
+		m.audioChannels = map[*webrtc.DataChannel]struct{}{}
+	}
+	m.audioChannels[dc] = struct{}{}
+	m.audioMu.Unlock()
+}
+
+func (m *Manager) removeAudioChannel(dc *webrtc.DataChannel) {
+	m.audioMu.Lock()
+	delete(m.audioChannels, dc)
+	m.audioMu.Unlock()
+}
+
+// sendLowLatencyAudio : message = u16 numéro de séquence (big-endian) + paquet Opus.
+func (m *Manager) sendLowLatencyAudio(pkt []byte) {
+	m.audioMu.Lock()
+	defer m.audioMu.Unlock()
+	if len(m.audioChannels) == 0 {
+		return
+	}
+	m.audioSeq++
+	msg := make([]byte, 2+len(pkt))
+	binary.BigEndian.PutUint16(msg, m.audioSeq)
+	copy(msg[2:], pkt)
+	for dc := range m.audioChannels {
+		if dc.BufferedAmount() < 64*1024 { // client lent : on saute plutôt que de retarder
+			_ = dc.Send(msg)
+		}
 	}
 }
 

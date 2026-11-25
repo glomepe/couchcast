@@ -187,6 +187,8 @@ const fr = {
   'tips.jitter': 'Ping irrégulier (±{ms} ms). Sur Mac, AirDrop/Handoff font sauter le Wi-Fi de canal : « sudo ifconfig awdl0 down » pendant le jeu.',
   'tips.bitrate': 'Images de {kb} Ko en moyenne à {mbps} Mbit/s : en Wi-Fi, chaque image met plus longtemps à arriver. Essayez 15–20 Mbit/s.',
   'tips.loss': '{n} images perdues entre la PS5 et le Mac : signe d’un Wi-Fi saturé. Baissez le débit ou passez en câble.',
+  'tips.audioDevice': 'Votre sortie audio ajoute {ms} ms à elle seule (haut-parleurs d’écran, Bluetooth…) : le son arrive après l’image. Les haut-parleurs du Mac ou un casque filaire descendent sous 20 ms.',
+  'stats.audioLag': 'Son en retard de',
   'tips.refresh': 'Écran à {hz} Hz : un écran 120 Hz affiche chaque image jusqu’à ~4 ms plus tôt.',
   'tips.keyframes': 'Images clés : toutes les 20 s avec le replay, 2 s pendant un live, aucune sinon (moins de pics de latence).',
 
@@ -456,6 +458,8 @@ const en: Record<Key, string> = {
   'tips.jitter': 'Unstable ping (±{ms} ms). On a Mac, AirDrop/Handoff make Wi-Fi hop channels: “sudo ifconfig awdl0 down” while playing.',
   'tips.bitrate': '{kb} KB frames on average at {mbps} Mbit/s: over Wi-Fi each frame takes longer to arrive. Try 15–20 Mbit/s.',
   'tips.loss': '{n} frames lost between the PS5 and the computer: a sign of busy Wi-Fi. Lower the bitrate or go wired.',
+  'tips.audioDevice': 'Your audio output alone adds {ms} ms (display speakers, Bluetooth…): sound lands after the picture. The Mac’s speakers or wired headphones stay under 20 ms.',
+  'stats.audioLag': 'Sound behind picture by',
   'tips.refresh': '{hz} Hz display: a 120 Hz screen shows each frame up to ~4 ms sooner.',
   'tips.keyframes': 'Keyframes: every 20 s with replay, every 2 s while live, none otherwise (fewer latency spikes).',
 

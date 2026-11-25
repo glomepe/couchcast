@@ -134,6 +134,7 @@ L'app et le navigateur n'ajoutent presque rien : environ 2 ms de tampon et envir
 2. Mettez le Mac en Ethernet, ou en Wi-Fi 5/6 GHz près de la box.
 3. Pendant le jeu, `sudo ifconfig awdl0 down` empêche AirDrop/Handoff de faire sauter le Wi-Fi sur d'autres canaux. `up` pour réactiver, ou redémarrez.
 4. En Wi-Fi, gardez un débit autour de 15–20 Mbit/s.
+5. **Le son** : Couchcast joue l'audio par sa propre voie basse latence (~30 ms de tampon au lieu de ~60 ms), mais votre sortie audio ajoute son propre délai. Les haut-parleurs d'écran (Apple Studio Display par exemple) et le Bluetooth ajoutent 80 à 200 ms ; ceux du Mac ou un casque filaire restent sous 20 ms. Les stats affichent « Son en retard de… ».
 
 ## Sécurité et vie privée
 

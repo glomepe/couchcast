@@ -21,6 +21,7 @@ import {
 import { useEffect, useState } from 'react';
 import { api, formatClock, type LiveDestination, type LiveStatus, type Status, type StreamSettings, type StudioSettings } from './api';
 import { useI18n } from './i18n';
+import { outputDeviceLatencyMs } from './audio';
 import { useRefreshRate } from './display';
 import { Calibration } from './Calibration';
 import { NEUTRAL, PRESETS, setImageSettings, useImageSettings, useStreamHdr, type ImageSettings } from './image';
@@ -178,6 +179,8 @@ function LatencyTips({ status }: { status: Status }) {
   if (p.samples && p.avgMs > 2.5 && s.videoKbps > 22000) tips.push(t('tips.bitrate', { kb: s.frameKB.toFixed(0), mbps: (s.videoKbps / 1000).toFixed(0) }));
   if (s.framesLost > 0) tips.push(t('tips.loss', { n: s.framesLost }));
   if (hz < 100) tips.push(t('tips.refresh', { hz }));
+  const out = outputDeviceLatencyMs();
+  if (out !== null && out > 40) tips.push(t('tips.audioDevice', { ms: Math.round(out) }));
   return (
     <div className="stack tips">
       <h3>{t('tips.title')}</h3>

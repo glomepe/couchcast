@@ -60,14 +60,19 @@ func (v *Viewers) Answer(offerSDP string) (string, error) {
 
 	// Manette : le navigateur envoie l'état (14 octets) à chaque changement.
 	pc.OnDataChannel(func(dc *webrtc.DataChannel) {
-		if dc.Label() != "gamepad" {
-			return
+		switch dc.Label() {
+		case "gamepad":
+			dc.OnMessage(func(msg webrtc.DataChannelMessage) {
+				if !msg.IsString {
+					v.manager.SendController(msg.Data)
+				}
+			})
+		case "audio":
+			// Son basse latence : paquets Opus bruts, joués par le navigateur avec un
+			// tampon court (le tampon audio standard de WebRTC ajoute ~50 ms).
+			dc.OnOpen(func() { v.manager.addAudioChannel(dc) })
+			dc.OnClose(func() { v.manager.removeAudioChannel(dc) })
 		}
-		dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-			if !msg.IsString {
-				v.manager.SendController(msg.Data)
-			}
-		})
 	})
 
 	joined := false

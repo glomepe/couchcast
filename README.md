@@ -134,6 +134,7 @@ The app and browser add almost nothing: about 2 ms of jitter buffer and about 1 
 2. Put the Mac on Ethernet, or on 5/6 GHz Wi-Fi close to the router.
 3. While playing, `sudo ifconfig awdl0 down` stops AirDrop/Handoff from hopping the Wi-Fi radio off-channel. Re-enable with `up`, or reboot.
 4. Over Wi-Fi, keep the bitrate around 15–20 Mbit/s.
+5. **Sound**: Couchcast plays audio through its own low-latency path (~30 ms buffer instead of ~60 ms), but your output device adds its own delay. Display speakers (e.g. Apple Studio Display) and Bluetooth add 80–200 ms; the Mac's speakers or wired headphones stay under 20 ms. The stats show “Sound behind picture by …”.
 
 ## Security & privacy
 
