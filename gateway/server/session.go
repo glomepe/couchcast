@@ -393,6 +393,24 @@ func (m *Manager) Stop() {
 	}
 }
 
+// Standby met la PS5 en mode repos via la session en cours, puis ferme la session.
+func (m *Manager) Standby() error {
+	m.mu.Lock()
+	proc := m.proc
+	m.mu.Unlock()
+	if proc == nil {
+		return errors.New("aucune session en cours : lancez d'abord le flux")
+	}
+	if err := proc.Standby(); err != nil {
+		return err
+	}
+	go func() {
+		time.Sleep(3 * time.Second) // laisse le message partir avant de couper
+		m.Stop()
+	}()
+	return nil
+}
+
 func (m *Manager) SendPin(pin string) error {
 	m.mu.Lock()
 	proc := m.proc

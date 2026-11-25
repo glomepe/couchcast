@@ -5,6 +5,7 @@ import {
   Copy,
   Gamepad2,
   Link2,
+  Moon,
   MonitorPlay,
   Pencil,
   Plus,
@@ -154,6 +155,16 @@ function StreamTab({ status }: { status: Status }) {
           <span className="muted small mono">{status.console?.host}</span>
         </div>
         <span className="spacer" />
+        {status.state === 'streaming' && (
+          <button
+            className="btn ghost"
+            onClick={() => {
+              if (confirm(t('stream.standbyConfirm'))) api.standby();
+            }}
+          >
+            <Moon size={15} /> {t('stream.standby')}
+          </button>
+        )}
         <button
           className="btn ghost danger"
           onClick={() => {
@@ -163,6 +174,7 @@ function StreamTab({ status }: { status: Status }) {
           <Unlink size={15} /> {t('stream.unpair')}
         </button>
       </div>
+      <p className="hint">{t('stream.wakeHint')}</p>
     </div>
   );
 }

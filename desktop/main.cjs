@@ -203,6 +203,7 @@ const TXT = {
     starting: 'démarrage…',
     ping: (p) => `Ping ${p.avgMs.toFixed(1)} ms · gigue ${p.jitterMs.toFixed(1)} ms · perte ${p.lossPct.toFixed(0)} %`,
     stopSession: 'Arrêter la session',
+    standby: 'Mettre la PS5 en repos',
     startSession: 'Démarrer la session',
     stopRec: (c) => `Arrêter l'enregistrement (${c})`,
     rec: 'Enregistrer',
@@ -228,6 +229,7 @@ const TXT = {
     starting: 'starting…',
     ping: (p) => `Ping ${p.avgMs.toFixed(1)} ms · jitter ${p.jitterMs.toFixed(1)} ms · loss ${p.lossPct.toFixed(0)} %`,
     stopSession: 'Stop session',
+    standby: 'Put the PS5 in rest mode',
     startSession: 'Start session',
     stopRec: (c) => `Stop recording (${c})`,
     rec: 'Record',
@@ -303,6 +305,7 @@ function updateTray() {
     streaming || st?.state === 'connecting' || st?.state === 'waking'
       ? { label: l.stopSession, click: () => action(() => post('/api/stream/stop')) }
       : { label: l.startSession, enabled: st?.state === 'idle' || st?.state === 'error', click: () => action(() => post('/api/stream/start')) },
+    { label: l.standby, enabled: streaming, click: () => action(() => post('/api/stream/standby')) },
     { type: 'separator' },
     {
       label: rec?.active ? l.stopRec(clock((Date.now() - new Date(rec.startedAt)) / 1000)) : l.rec,

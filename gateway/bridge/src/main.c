@@ -19,6 +19,7 @@
 //   2 IDR         demande une image clé
 //   3 STOP        termine la session proprement
 //   4 PIN         code PIN de connexion (ASCII)
+//   5 STANDBY     met la PS5 en mode repos (la session se termine)
 
 #include <chiaki/base64.h>
 #include <chiaki/common.h>
@@ -48,7 +49,7 @@
 #include <unistd.h>
 
 enum { PKT_VIDEO = 1, PKT_AUDIO = 2, PKT_EVENT = 3 };
-enum { CMD_CONTROLLER = 1, CMD_IDR = 2, CMD_STOP = 3, CMD_PIN = 4 };
+enum { CMD_CONTROLLER = 1, CMD_IDR = 2, CMD_STOP = 3, CMD_PIN = 4, CMD_STANDBY = 5 };
 
 typedef struct {
 	const char *host;
@@ -426,6 +427,9 @@ static void *stdin_thread(void *arg)
 				break;
 			case CMD_PIN:
 				chiaki_session_set_login_pin(&g_session, payload, len);
+				break;
+			case CMD_STANDBY:
+				chiaki_session_goto_bed(&g_session);
 				break;
 			case CMD_STOP:
 				goto stop;

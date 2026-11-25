@@ -124,6 +124,13 @@ func (a *API) Register(mux *http.ServeMux) {
 		a.manager.Stop()
 		writeJSON(w, http.StatusOK, a.manager.Status())
 	})
+	mux.HandleFunc("POST /api/stream/standby", func(w http.ResponseWriter, r *http.Request) {
+		if err := a.manager.Standby(); err != nil {
+			writeError(w, http.StatusConflict, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	})
 	mux.HandleFunc("POST /api/stream/pin", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			Pin string `json:"pin"`

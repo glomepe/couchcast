@@ -113,6 +113,10 @@ const fr = {
   'stream.restart': 'Appliqué : la session redémarre.',
   'stream.console': 'Console',
   'stream.unpair': 'Dissocier la console',
+  'stream.standby': 'Mettre en repos',
+  'stream.standbyConfirm': 'Mettre la PS5 en mode repos ? La partie en cours sera suspendue (ou fermée si le jeu ne le gère pas).',
+  'stream.wakeHint':
+    'Réveil à distance : sur la PS5, Paramètres › Système › Économie d’énergie › Fonctions disponibles en mode repos › activez « Rester connecté à Internet » et « Permettre de mettre la PS5 sous tension depuis le réseau ».',
   'stream.unpairConfirm': 'Dissocier cette console ? Il faudra refaire l’appairage avec un nouveau code.',
   'clips.memory': 'Mémoire de replay',
   'clips.off': 'Désactivée',
@@ -385,6 +389,10 @@ const en: Record<Key, string> = {
   'stream.restart': 'Applied: the session is restarting.',
   'stream.console': 'Console',
   'stream.unpair': 'Unpair console',
+  'stream.standby': 'Rest mode',
+  'stream.standbyConfirm': 'Put the PS5 in rest mode? The current game will be suspended (or closed if it does not support it).',
+  'stream.wakeHint':
+    'Remote wake-up: on the PS5, Settings › System › Power Saving › Features Available in Rest Mode › turn on “Stay Connected to the Internet” and “Enable Turning On PS5 from Network”.',
   'stream.unpairConfirm': 'Unpair this console? You will need a new pairing code.',
   'clips.memory': 'Replay buffer',
   'clips.off': 'Off',

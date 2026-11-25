@@ -141,6 +141,7 @@ export const api = {
   start: () => call<Status>('POST', '/api/stream/start'),
   stop: () => call<Status>('POST', '/api/stream/stop'),
   pin: (pin: string) => call<{ ok: boolean }>('POST', '/api/stream/pin', { pin }),
+  standby: () => call<{ ok: boolean }>('POST', '/api/stream/standby'),
 
   studioSettings: (s: StudioSettings) => call<Status>('PUT', '/api/studio/settings', s),
   clip: (seconds: number) => call<Job>('POST', '/api/clip', { seconds }),

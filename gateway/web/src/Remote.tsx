@@ -1,4 +1,4 @@
-import { Clapperboard, Power, Radio, Scissors } from 'lucide-react';
+import { Clapperboard, Moon, Power, Radio, Scissors } from 'lucide-react';
 import { api, type Status } from './api';
 import { useI18n } from './i18n';
 import { PingMeter, RecButton, clip, clipLabel } from './studio/Controls';
@@ -57,6 +57,11 @@ export function Remote({ status }: { status: Status }) {
         )}
       </div>
       {!status.studio?.settings.keepAlive && <p className="hint-card small">{t('remote.keepAlive')}</p>}
+      {streaming && (
+        <button className="btn ghost" onClick={() => confirm(t('stream.standbyConfirm')) && api.standby()}>
+          <Moon size={16} /> {t('stream.standby')}
+        </button>
+      )}
       <a href="#/bibliotheque" className="btn ghost">
         <Clapperboard size={16} /> {t('lib.title')}
       </a>

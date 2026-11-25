@@ -27,6 +27,7 @@ const (
 	cmdIDR        = 2
 	cmdStop       = 3
 	cmdPin        = 4
+	cmdStandby    = 5
 )
 
 type Bridge struct {
@@ -235,6 +236,8 @@ func (p *StreamProcess) RequestIDR() error { return p.send(cmdIDR, nil) }
 func (p *StreamProcess) SendController(state []byte) error { return p.send(cmdController, state) }
 
 func (p *StreamProcess) SendPin(pin string) error { return p.send(cmdPin, []byte(pin)) }
+
+func (p *StreamProcess) Standby() error { return p.send(cmdStandby, nil) }
 
 // Stop demande un arrêt propre (la console libère la session Remote Play),
 // puis tue le processus s'il ne s'est pas terminé à temps.
