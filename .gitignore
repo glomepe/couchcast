@@ -16,3 +16,4 @@ gateway/data/
 .DS_Store
 *.log
 desktop/resources/
+*.tsbuildinfo

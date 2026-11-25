@@ -2,7 +2,7 @@
 
 **Regardez, clippez, enregistrez et diffusez en live votre PS5 depuis n'importe quel navigateur de la maison : sans boîtier de capture et sans modifier la console.**
 
-[English version](README.md)
+[English version](README.md) · 🌐 [glomepe.github.io/couchcast](https://glomepe.github.io/couchcast/)
 
 > [!WARNING]
 > **Ce projet a été « vibe codé ».** Il a été écrit en quelques sessions avec un assistant IA et testé sur une seule configuration (Mac Apple Silicon + PS5 en Wi-Fi). Il n'a pas de vraie suite de tests automatisés. Il fonctionne sur cette configuration, peut-être pas sur la vôtre. Lisez le code avant de lui faire confiance et attendez-vous à quelques angles morts.

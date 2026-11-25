@@ -2,7 +2,7 @@
 
 **Watch, clip, record and live-stream your PS5 from any browser on your home network: no capture card, no console mods.**
 
-[Version française](README.fr.md)
+[Version française](README.fr.md) · 🌐 [glomepe.github.io/couchcast](https://glomepe.github.io/couchcast/)
 
 > [!WARNING]
 > **This project was vibe-coded.** It was built in a few sessions of pair-programming with an AI assistant, tested on exactly one setup (Apple Silicon Mac + PS5 over Wi-Fi), and has no automated test suite worth the name. It works on that setup. It may not work on yours. Read the code before you trust it, and expect rough edges.
