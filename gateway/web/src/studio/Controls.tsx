@@ -83,7 +83,7 @@ export function ClipButton({ status }: { status: Status }) {
       <button className="split-main" disabled={!enabled} onClick={() => clip(30)}>
         <Scissors size={16} strokeWidth={1.9} />
         {t('clip.button', { s: '30 s' })}
-        <span className="tip">{max ? t('clip.memory', { s: Math.floor(available) }) : t('clip.disabled')} <Kbd>C</Kbd></span>
+        <span className="tip">{max ? t('clip.memory', { s: Math.min(Math.floor(available), max) }) : t('clip.disabled')} <Kbd>C</Kbd></span>
       </button>
       <button className="split-caret" disabled={!enabled} onClick={() => setOpen((o) => !o)} aria-label="…">
         <ChevronDown size={15} />
@@ -104,7 +104,7 @@ export function ClipButton({ status }: { status: Status }) {
               {s === 120 && <Kbd>⇧ C</Kbd>}
             </button>
           ))}
-          <p className="menu-note">{t('clip.memory', { s: Math.floor(available) })}</p>
+          <p className="menu-note">{t('clip.memory', { s: Math.min(Math.floor(available), max) })}</p>
         </div>
       )}
     </div>

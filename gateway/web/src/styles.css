@@ -384,9 +384,9 @@ select {
 
 .remote { max-width: 460px; margin: 0 auto; padding: 18px 16px 40px; display: grid; gap: 14px; align-content: start; }
 .remote-head { display: flex; align-items: center; gap: 10px; }
-.clip-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.clip-pad { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .clip-pad button { display: grid; justify-items: center; gap: 3px; padding: 16px 6px; border-radius: var(--r-lg); background: var(--raise); border: 1px solid var(--line-2); color: var(--muted); }
-.clip-pad button:first-child { grid-column: span 3; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.clip-pad button:first-child { grid-column: span 2; padding: 26px 6px; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .clip-pad button:first-child strong { color: var(--accent-ink); }
 .clip-pad button strong { font-size: 20px; color: var(--text); }
 .clip-pad button:active:not(:disabled) { transform: scale(0.97); }

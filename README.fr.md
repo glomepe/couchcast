@@ -63,8 +63,8 @@ Récupérez la dernière version sur la **[page des Releases](https://github.com
 
 | Système | Fichier |
 |---|---|
-| macOS (Apple Silicon, M1 et suivants) | `Couchcast-<version>-mac-arm64.dmg` |
-| Windows 10/11 (x64) | `Couchcast-<version>-win-x64.exe` (installateur) ou `.zip` (portable) |
+| macOS (Apple Silicon, M1 et suivants) | [`Couchcast-mac-arm64.dmg`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-mac-arm64.dmg) |
+| Windows 10/11 (x64) | [`Couchcast-win-x64.exe`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-win-x64.exe) (installateur) ou [`.zip`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-win-x64.zip) (portable) |
 
 ffmpeg et toutes les bibliothèques sont inclus. Il n'y a rien d'autre à installer.
 

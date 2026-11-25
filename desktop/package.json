@@ -47,7 +47,7 @@
         "NSLocalNetworkUsageDescription": "Couchcast communique avec votre PS5 sur le réseau local."
       }
     },
-    "artifactName": "Couchcast-${version}-${os}-${arch}.${ext}",
+    "artifactName": "Couchcast-${os}-${arch}.${ext}",
     "win": {
       "icon": "assets/icon.png",
       "target": [

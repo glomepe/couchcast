@@ -6,8 +6,8 @@
 #             (la CI y place les builds BtbN, référencés par ffmpeg.org).
 # Sans ffmpeg embarqué, Couchcast utilise celui du PATH.
 # Prérequis : ../gateway/build.sh déjà exécuté sur la même machine.
-#   macOS   → dist/Couchcast-<version>-mac-arm64.dmg et .zip
-#   Windows → dist/Couchcast-<version>-win-x64.exe (installateur) et .zip  (terminal MSYS2 UCRT64)
+#   macOS   → dist/Couchcast-mac-arm64.dmg et .zip
+#   Windows → dist/Couchcast-win-x64.exe (installateur) et .zip  (terminal MSYS2 UCRT64)
 set -euo pipefail
 cd "$(dirname "$0")"
 

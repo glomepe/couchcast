@@ -4,6 +4,7 @@ import { api, formatClock, type Status } from './api';
 import { Drawer, type DrawerTab } from './Drawer';
 import { startGamepadLoop } from './gamepad';
 import { useI18n } from './i18n';
+import { cssFilter, sharpenKernel, useImageSettings } from './image';
 import { ShortcutHelp, useShortcuts, type ShortcutAction } from './shortcuts';
 import { ClipButton, PingMeter, RecButton, clip, toggleRecording } from './studio/Controls';
 import { IconButton, Kbd } from './ui';
@@ -28,6 +29,7 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
   const [gamepadName, setGamepadName] = useState<string | null>(null);
   const [viewerStats, setViewerStats] = useState<ViewerStats | null>(null);
 
+  const image = useImageSettings();
   const sessionActive = ['streaming', 'connecting', 'waking', 'pin'].includes(status.state);
 
   const disconnect = useCallback(() => {
@@ -148,6 +150,9 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
         case 'library':
           location.hash = '#/bibliotheque';
           break;
+        case 'image':
+          setDrawer((d) => (d === 'image' ? null : 'image'));
+          break;
         case 'gamepad':
           if (st.settings.control) setGamepadOn((g) => !g);
           break;
@@ -180,7 +185,20 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
 
   return (
     <div className={`player ${chromeHidden ? 'chrome-hidden' : ''}`}>
-      <video ref={videoRef} autoPlay playsInline muted className={showVideo ? '' : 'hidden'} onDoubleClick={toggleFullscreen} />
+      <svg width="0" height="0" aria-hidden style={{ position: 'absolute' }}>
+        <filter id="cc-sharpen" colorInterpolationFilters="sRGB">
+          <feConvolveMatrix order="3" kernelMatrix={sharpenKernel(image.sharpness)} preserveAlpha="true" />
+        </filter>
+      </svg>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className={showVideo ? '' : 'hidden'}
+        style={{ filter: cssFilter(image) }}
+        onDoubleClick={toggleFullscreen}
+      />
 
       {!showVideo && <Splash status={status} rtcState={rtcState} rtcError={rtcError} onLaunch={launch} />}
       {status.state === 'pin' && <PinPrompt error={status.error} />}

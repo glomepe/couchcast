@@ -13,6 +13,7 @@ export type ShortcutAction =
   | 'record'
   | 'stats'
   | 'settings'
+  | 'image'
   | 'library'
   | 'gamepad'
   | 'stop'
@@ -28,6 +29,7 @@ export const SHORTCUTS: Array<{ action: ShortcutAction; keys: string[]; label: s
   { action: 'record', keys: ['R'], label: 'sc.record', match: (e) => e.code === 'KeyR' },
   { action: 'stats', keys: ['T'], label: 'sc.stats', match: (e) => e.code === 'KeyT' },
   { action: 'settings', keys: [','], label: 'sc.settings', match: (e) => e.key === ',' },
+  { action: 'image', keys: ['I'], label: 'sc.image', match: (e) => e.code === 'KeyI' },
   { action: 'library', keys: ['L'], label: 'sc.library', match: (e) => e.code === 'KeyL' },
   { action: 'gamepad', keys: ['G'], label: 'sc.gamepad', match: (e) => e.code === 'KeyG' },
   { action: 'stop', keys: ['⇧', 'X'], label: 'sc.stop', match: (e) => e.code === 'KeyX' && e.shiftKey },

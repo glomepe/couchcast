@@ -165,8 +165,9 @@ export function formatClock(totalSeconds: number): string {
 }
 
 export function formatSize(bytes: number): string {
-  if (bytes > 1e9) return `${(bytes / 1e9).toFixed(1)} Go`;
-  return `${(bytes / 1e6).toFixed(0)} Mo`;
+  const fr = document.documentElement.lang === 'fr';
+  if (bytes > 1e9) return `${(bytes / 1e9).toFixed(1)} ${fr ? 'Go' : 'GB'}`;
+  return `${(bytes / 1e6).toFixed(0)} ${fr ? 'Mo' : 'MB'}`;
 }
 
 /** État de la passerelle, poussé en continu par le serveur (Server-Sent Events). */

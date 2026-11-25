@@ -55,6 +55,21 @@ const fr = {
 
   // Tiroir de réglages
   'tab.stream': 'Flux',
+  'tab.image': 'Image',
+  'image.intro':
+    'Le Remote Play transmet une image 1080p SDR compressée par la PS5 : elle paraît plus douce et plus terne que sur la TV (4K, HDR, traitement de la TV). Ces réglages la corrigent à l’affichage, par la carte graphique, sans latence ; ils n’affectent pas les clips, enregistrements ni lives.',
+  'image.presets': 'Préréglages',
+  'image.neutral': 'Neutre',
+  'image.vivid': 'Éclatant',
+  'image.cinema': 'Cinéma',
+  'image.brightness': 'Luminosité',
+  'image.contrast': 'Contraste',
+  'image.saturation': 'Saturation',
+  'image.sharpness': 'Netteté',
+  'image.reset': 'Réinitialiser',
+  'image.quality':
+    'Pour une image plus fine à la source : débit plus élevé (onglet Flux, 30–40 Mbit/s) et PS5 en Ethernet.',
+  'sc.image': 'Réglages d’image',
   'tab.clips': 'Clips',
   'tab.live': 'Live',
   'tab.links': 'Liens',
@@ -267,6 +282,20 @@ const en: Record<Key, string> = {
   'common.back': 'Back',
 
   'tab.stream': 'Stream',
+  'tab.image': 'Picture',
+  'image.intro':
+    'Remote Play sends a 1080p SDR picture compressed by the PS5: it looks softer and duller than on the TV (4K, HDR, TV processing). These settings correct it on display, on the GPU, with no added latency. They do not affect clips, recordings or live streams.',
+  'image.presets': 'Presets',
+  'image.neutral': 'Neutral',
+  'image.vivid': 'Vivid',
+  'image.cinema': 'Cinema',
+  'image.brightness': 'Brightness',
+  'image.contrast': 'Contrast',
+  'image.saturation': 'Saturation',
+  'image.sharpness': 'Sharpness',
+  'image.reset': 'Reset',
+  'image.quality': 'For a sharper source picture: raise the bitrate (Stream tab, 30–40 Mbit/s) and put the PS5 on Ethernet.',
+  'sc.image': 'Picture settings',
   'tab.clips': 'Clips',
   'tab.live': 'Live',
   'tab.links': 'Links',

@@ -9,7 +9,9 @@ import {
   Pencil,
   Plus,
   Radio,
+  RotateCcw,
   Smartphone,
+  SunMedium,
   Trash2,
   Unlink,
   Video,
@@ -19,16 +21,18 @@ import {
 import { useEffect, useState } from 'react';
 import { api, formatClock, type LiveDestination, type LiveStatus, type Status, type StreamSettings, type StudioSettings } from './api';
 import { useI18n } from './i18n';
+import { NEUTRAL, PRESETS, setImageSettings, useImageSettings, type ImageSettings } from './image';
 import { ShortcutList } from './shortcuts';
 import { useElapsed } from './studio/Controls';
 import { FFmpegWarning, Field, Segmented, Tabs, Toggle } from './ui';
 
-export type DrawerTab = 'stream' | 'clips' | 'live' | 'links' | 'app';
+export type DrawerTab = 'stream' | 'image' | 'clips' | 'live' | 'links' | 'app';
 
 export function Drawer({ status, tab, onTab, onClose }: { status: Status; tab: DrawerTab; onTab: (t: DrawerTab) => void; onClose: () => void }) {
   const { t } = useI18n();
   const tabs: Array<{ id: DrawerTab; label: string; icon: LucideIcon }> = [
     { id: 'stream', label: t('tab.stream'), icon: MonitorPlay },
+    { id: 'image', label: t('tab.image'), icon: SunMedium },
     { id: 'clips', label: t('tab.clips'), icon: Clapperboard },
     { id: 'live', label: t('tab.live'), icon: Radio },
     { id: 'links', label: t('tab.links'), icon: Link2 },
@@ -45,6 +49,7 @@ export function Drawer({ status, tab, onTab, onClose }: { status: Status; tab: D
       <div className="drawer-body" key={tab}>
         {(tab === 'clips' || tab === 'live') && <FFmpegWarning ok={status.studio?.ffmpeg} os={status.studio?.os} t={t} />}
         {tab === 'stream' && <StreamTab status={status} />}
+        {tab === 'image' && <ImageTab />}
         {tab === 'clips' && status.studio && <ClipsTab settings={status.studio.settings} replayMB={status.studio.replayMB} available={status.studio.replaySeconds} />}
         {tab === 'live' && <LiveTab status={status} />}
         {tab === 'links' && <LinksTab />}
@@ -117,6 +122,48 @@ function StreamTab({ status }: { status: Status }) {
           <Unlink size={15} /> {t('stream.unpair')}
         </button>
       </div>
+    </div>
+  );
+}
+
+// --- Image ---------------------------------------------------------------------
+
+function ImageTab() {
+  const { t } = useI18n();
+  const s = useImageSettings();
+  const set = (patch: Partial<ImageSettings>) => setImageSettings({ ...s, ...patch });
+  const preset = (Object.keys(PRESETS) as Array<keyof typeof PRESETS>).find((k) => JSON.stringify(PRESETS[k]) === JSON.stringify(s));
+  const sliders: Array<{ key: keyof ImageSettings; label: string; min: number; max: number; fmt: (v: number) => string }> = [
+    { key: 'brightness', label: t('image.brightness'), min: 0.7, max: 1.3, fmt: (v) => `${Math.round(v * 100)} %` },
+    { key: 'contrast', label: t('image.contrast'), min: 0.7, max: 1.4, fmt: (v) => `${Math.round(v * 100)} %` },
+    { key: 'saturation', label: t('image.saturation'), min: 0, max: 2, fmt: (v) => `${Math.round(v * 100)} %` },
+    { key: 'sharpness', label: t('image.sharpness'), min: 0, max: 1, fmt: (v) => `${Math.round(v * 100)} %` },
+  ];
+  return (
+    <div className="stack">
+      <p className="hint">{t('image.intro')}</p>
+      <Field label={t('image.presets')}>
+        <Segmented
+          value={preset ?? ('custom' as never)}
+          onChange={(k) => setImageSettings(PRESETS[k])}
+          items={[
+            { id: 'neutral' as const, label: t('image.neutral') },
+            { id: 'vivid' as const, label: t('image.vivid') },
+            { id: 'cinema' as const, label: t('image.cinema') },
+          ]}
+        />
+      </Field>
+      {sliders.map(({ key, label, min, max, fmt }) => (
+        <Field key={key} label={`${label} · ${fmt(s[key])}`}>
+          <input type="range" min={min} max={max} step={0.01} value={s[key]} onChange={(e) => set({ [key]: Number(e.target.value) })} onDoubleClick={() => set({ [key]: NEUTRAL[key] })} />
+        </Field>
+      ))}
+      <div className="row">
+        <button className="btn ghost" onClick={() => setImageSettings(NEUTRAL)}>
+          <RotateCcw size={15} /> {t('image.reset')}
+        </button>
+      </div>
+      <p className="hint">{t('image.quality')}</p>
     </div>
   );
 }

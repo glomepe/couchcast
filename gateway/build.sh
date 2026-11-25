@@ -37,13 +37,19 @@ fi
 # Sources chiaki-ng (version figée) + sous-modules nécessaires.
 CHIAKI_REV=43728af2e639fecb8a7af1cd68c29820a40de973
 if [ ! -d third_party/chiaki-ng/.git ]; then
-  git clone https://github.com/streetpea/chiaki-ng third_party/chiaki-ng
-  git -C third_party/chiaki-ng checkout -q "$CHIAKI_REV"
+  # Sans conversion des fins de ligne (sinon le patch ne s'applique pas sous Windows).
+  git -c core.autocrlf=false clone https://github.com/streetpea/chiaki-ng third_party/chiaki-ng
+  git -C third_party/chiaki-ng -c core.autocrlf=false checkout -q "$CHIAKI_REV"
 fi
-git -C third_party/chiaki-ng submodule update --init --depth 1 third-party/nanopb third-party/jerasure third-party/gf-complete
+git -C third_party/chiaki-ng -c core.autocrlf=false submodule update --init --depth 1 third-party/nanopb third-party/jerasure third-party/gf-complete
 # Patch « mode spectateur » (n'annonce pas de manette à la PS5), appliqué une seule fois.
-if git -C third_party/chiaki-ng apply --check ../../patches/chiaki-spectator.patch 2>/dev/null; then
-  git -C third_party/chiaki-ng apply ../../patches/chiaki-spectator.patch
+PATCH=../../patches/chiaki-spectator.patch
+if git -C third_party/chiaki-ng apply --check "$PATCH" 2>/dev/null; then
+  git -C third_party/chiaki-ng apply "$PATCH"
+elif ! git -C third_party/chiaki-ng apply --reverse --check "$PATCH" 2>/dev/null; then
+  echo "Le patch chiaki-spectator ne s'applique pas sur third_party/chiaki-ng." >&2
+  git -C third_party/chiaki-ng apply --check -v "$PATCH" >&2 || true
+  exit 1
 fi
 
 echo "==> pont C ($PLATFORM)"

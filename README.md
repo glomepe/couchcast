@@ -63,8 +63,8 @@ Grab the latest build from the **[Releases page](https://github.com/glomepe/couc
 
 | System | File |
 |---|---|
-| macOS (Apple Silicon, M1 and later) | `Couchcast-<version>-mac-arm64.dmg` |
-| Windows 10/11 (x64) | `Couchcast-<version>-win-x64.exe` (installer) or `.zip` (portable) |
+| macOS (Apple Silicon, M1 and later) | [`Couchcast-mac-arm64.dmg`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-mac-arm64.dmg) |
+| Windows 10/11 (x64) | [`Couchcast-win-x64.exe`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-win-x64.exe) (installer) or [`.zip`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-win-x64.zip) (portable) |
 
 ffmpeg and every library are bundled. There is nothing else to install.
 
