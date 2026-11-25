@@ -1,0 +1,17 @@
+# Dépendances et builds
+node_modules/
+dist/
+build/
+.venv/
+
+# Sources tierces récupérées par gateway/build.sh
+gateway/third_party/
+
+# Données locales : clés d'appairage PS5, clés de stream
+gateway/data/
+
+# Éditeurs / système
+.idea/
+.vscode/
+.DS_Store
+*.log

@@ -1,0 +1,54 @@
+{
+  "name": "couchcast-desktop",
+  "productName": "Couchcast",
+  "version": "0.2.0",
+  "private": true,
+  "description": "PS5 → navigateur : flux, clips, enregistrement et live",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "icons": "./make-icons.sh",
+    "dist": "./make-icons.sh && electron-builder --mac dir"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "app.couchcast.desktop",
+    "productName": "Couchcast",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../gateway/build/couchcast-server",
+        "to": "bin/couchcast-server"
+      },
+      {
+        "from": "../gateway/build/bridge/couchcast-bridge",
+        "to": "bin/couchcast-bridge"
+      },
+      {
+        "from": "../gateway/web/dist",
+        "to": "web"
+      }
+    ],
+    "mac": {
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.video",
+      "target": [
+        "dir"
+      ],
+      "identity": null,
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "Couchcast communique avec votre PS5 sur le réseau local."
+      }
+    }
+  },
+  "license": "AGPL-3.0-only"
+}

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LG Remote Screen</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0b0c0e; --panel: rgba(16, 18, 22, .82); --text: #e8eaed; --muted: #9aa0a6; --ok: #5fd38d; --warn: #f2c14e; --bad: #ef6b6b; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    #stage { position: fixed; inset: 0; display: grid; place-items: center; }
+    canvas { max-width: 100%; max-height: 100%; background: #000; }
+    #empty { position: absolute; color: var(--muted); text-align: center; padding: 16px; }
+    #hud { position: fixed; top: 12px; left: 12px; background: var(--panel); border-radius: 8px; padding: 10px 12px; min-width: 260px; backdrop-filter: blur(6px); }
+    #hud.hidden { display: none; }
+    #hud table { border-collapse: collapse; }
+    #hud td { padding: 1px 0; }
+    #hud td:first-child { color: var(--muted); padding-right: 14px; }
+    #controls { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    button, select { background: #23262c; color: var(--text); border: 1px solid #353941; border-radius: 6px; padding: 4px 8px; font: inherit; cursor: pointer; }
+    .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="view" hidden></canvas>
+    <div id="empty">En attente de frames…<br>Configure PicCap pour envoyer vers l'IP de cet ordinateur, port 19400.</div>
+  </div>
+  <div id="hud">
+    <table>
+      <tr><td>Connexion</td><td id="s-conn" class="warn">…</td></tr>
+      <tr><td>Source TV</td><td id="s-source">-</td></tr>
+      <tr><td>Format</td><td id="s-format">-</td></tr>
+      <tr><td>FPS reçus (serveur)</td><td id="s-fps">-</td></tr>
+      <tr><td>FPS affichés</td><td id="s-dfps">-</td></tr>
+      <tr><td>Débit TV → PC</td><td id="s-mbps">-</td></tr>
+      <tr><td>Intervalle moy / max</td><td id="s-int">-</td></tr>
+      <tr><td>Taille d'une frame</td><td id="s-size">-</td></tr>
+      <tr><td>Frames sautées</td><td id="s-drop">-</td></tr>
+    </table>
+    <div id="controls">
+      <select id="matrix" title="Matrice de conversion YUV → RGB">
+        <option value="709">BT.709</option>
+        <option value="601">BT.601</option>
+      </select>
+      <select id="range" title="Plage YUV">
+        <option value="limited">Plage limitée</option>
+        <option value="full">Plage complète</option>
+      </select>
+      <button id="fs">Plein écran (F)</button>
+      <button id="hide">Masquer (H)</button>
+    </div>
+  </div>
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>

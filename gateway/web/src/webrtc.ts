@@ -1,0 +1,131 @@
+// Connexion WebRTC de lecture : une offre SDP envoyée en HTTP, une réponse complète
+// en retour (pas de trickle ICE : tout se passe sur le réseau local).
+
+export interface ViewerStats {
+  fps: number;
+  kbps: number;
+  width: number;
+  height: number;
+  packetsLost: number;
+  framesDropped: number;
+  jitterBufferMs: number; // tampon de gigue (valeur sur la dernière seconde)
+  decodeMs: number; // temps de décodage moyen d'une image
+  pipelineMs: number; // de la réception du premier paquet à l'image décodée
+  rttMs: number;
+  codec: string;
+}
+
+export interface Viewer {
+  pc: RTCPeerConnection;
+  gamepad: RTCDataChannel;
+  close(): void;
+  stats(): Promise<ViewerStats>;
+}
+
+export async function connectViewer(video: HTMLVideoElement, onState: (s: RTCPeerConnectionState) => void): Promise<Viewer> {
+  const pc = new RTCPeerConnection();
+  const stream = new MediaStream();
+  video.srcObject = stream;
+
+  for (const kind of ['video', 'audio'] as const) {
+    const t = pc.addTransceiver(kind, { direction: 'recvonly' });
+    lowLatency(t.receiver);
+  }
+  pc.ontrack = (e) => {
+    stream.addTrack(e.track);
+    lowLatency(e.receiver);
+  };
+  pc.onconnectionstatechange = () => onState(pc.connectionState);
+
+  // Canal non fiable et non ordonné : seul le dernier état de la manette compte.
+  const gamepad = pc.createDataChannel('gamepad', { ordered: false, maxRetransmits: 0 });
+
+  await pc.setLocalDescription(await pc.createOffer());
+  await iceGatheringComplete(pc);
+  const res = await fetch('/api/webrtc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/sdp' },
+    body: pc.localDescription!.sdp,
+  });
+  if (!res.ok) {
+    pc.close();
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? `HTTP ${res.status}`);
+  }
+  await pc.setRemoteDescription({ type: 'answer', sdp: await res.text() });
+
+  let last = { at: 0, bytes: 0, jb: 0, jbCount: 0, decode: 0, processing: 0, decoded: 0 };
+  return {
+    pc,
+    gamepad,
+    close: () => pc.close(),
+    async stats() {
+      const report = await pc.getStats();
+      const s: ViewerStats = { fps: 0, kbps: 0, width: 0, height: 0, packetsLost: 0, framesDropped: 0, jitterBufferMs: 0, decodeMs: 0, pipelineMs: 0, rttMs: 0, codec: '' };
+      const codecs = new Map<string, string>();
+      report.forEach((r) => {
+        if (r.type === 'codec') codecs.set(r.id, r.mimeType);
+      });
+      report.forEach((r) => {
+        if (r.type === 'inbound-rtp' && r.kind === 'video') {
+          s.fps = r.framesPerSecond ?? 0;
+          s.width = r.frameWidth ?? 0;
+          s.height = r.frameHeight ?? 0;
+          s.packetsLost = r.packetsLost ?? 0;
+          s.framesDropped = r.framesDropped ?? 0;
+          s.codec = (codecs.get(r.codecId) ?? '').replace('video/', '');
+          // Valeurs cumulées depuis le début : on calcule la différence sur la dernière période.
+          const now = r.timestamp as number;
+          const emitted = r.jitterBufferEmittedCount ?? 0;
+          const decoded = r.framesDecoded ?? 0;
+          if (last.at) {
+            s.kbps = ((r.bytesReceived - last.bytes) * 8) / (now - last.at);
+            if (emitted > last.jbCount) s.jitterBufferMs = ((r.jitterBufferDelay - last.jb) / (emitted - last.jbCount)) * 1000;
+            if (decoded > last.decoded) {
+              s.decodeMs = (((r.totalDecodeTime ?? 0) - last.decode) / (decoded - last.decoded)) * 1000;
+              s.pipelineMs = (((r.totalProcessingDelay ?? 0) - last.processing) / (decoded - last.decoded)) * 1000;
+            }
+          }
+          last = {
+            at: now,
+            bytes: r.bytesReceived,
+            jb: r.jitterBufferDelay ?? 0,
+            jbCount: emitted,
+            decode: r.totalDecodeTime ?? 0,
+            processing: r.totalProcessingDelay ?? 0,
+            decoded,
+          };
+        }
+        if (r.type === 'candidate-pair' && r.nominated && r.currentRoundTripTime !== undefined) {
+          s.rttMs = r.currentRoundTripTime * 1000;
+        }
+      });
+      return s;
+    },
+  };
+}
+
+// Réduit au minimum le tampon de lecture (Chrome : jitterBufferTarget, ancien nom playoutDelayHint).
+function lowLatency(receiver: RTCRtpReceiver) {
+  const r = receiver as unknown as { jitterBufferTarget?: number | null; playoutDelayHint?: number };
+  try {
+    if ('jitterBufferTarget' in receiver) r.jitterBufferTarget = 0;
+    else r.playoutDelayHint = 0;
+  } catch {
+    /* non supporté par ce navigateur */
+  }
+}
+
+function iceGatheringComplete(pc: RTCPeerConnection): Promise<void> {
+  if (pc.iceGatheringState === 'complete') return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      if (pc.iceGatheringState === 'complete') {
+        pc.removeEventListener('icegatheringstatechange', done);
+        resolve();
+      }
+    };
+    pc.addEventListener('icegatheringstatechange', done);
+    setTimeout(resolve, 2000); // les candidats hôte suffisent en local
+  });
+}
