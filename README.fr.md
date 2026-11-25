@@ -41,7 +41,6 @@ PS5 ──Remote Play (H.264 + Opus)──► couchcast-bridge (C, lib chiaki-ng
 | `gateway/server/` | Serveur Go : API HTTP, WebRTC (Pion), mémoire de replay, écriture Matroska, traitements ffmpeg, lives, récupération de l'identifiant PSN. |
 | `gateway/web/` | Interface React (Vite) : lecteur, réglages, bibliothèque, télécommande, assistant d'appairage. |
 | `desktop/` | Coque Electron : lance le serveur, barre des menus, raccourcis globaux. |
-| `archive/` | La première piste abandonnée (capturer l'écran d'une TV LG rootée), gardée pour l'historique. |
 
 ## Prérequis
 

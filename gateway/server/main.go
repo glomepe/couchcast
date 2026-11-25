@@ -127,10 +127,6 @@ func (a *API) Register(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("POST /api/webrtc", a.webrtcOffer)
 	a.registerStudio(mux)
-	mux.HandleFunc("POST /api/stream/keyframe", func(w http.ResponseWriter, r *http.Request) {
-		a.manager.RequestKeyframe()
-		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
-	})
 }
 
 func (a *API) events(w http.ResponseWriter, r *http.Request) {

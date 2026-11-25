@@ -61,25 +61,6 @@ async function serverUp() {
   }
 }
 
-// Migration depuis l'ancien nom du projet (« LG Remote Screen ») : config et clips.
-function migrateLegacy() {
-  const home = os.homedir();
-  const oldData = path.join(app.getPath('appData'), 'LG Remote Screen', 'config.json');
-  const newData = path.join(app.getPath('userData'), 'config.json');
-  if (fs.existsSync(oldData) && !fs.existsSync(newData)) {
-    fs.mkdirSync(path.dirname(newData), { recursive: true });
-    fs.copyFileSync(oldData, newData);
-    fs.chmodSync(newData, 0o600);
-  }
-  const oldMedia = path.join(home, 'Movies', 'LG Remote Screen');
-  const newMedia = path.join(home, 'Movies', 'Couchcast');
-  const hasVideos = (dir) => fs.existsSync(dir) && fs.readdirSync(dir).some((f) => f.endsWith('.mp4'));
-  if (hasVideos(oldMedia) && !hasVideos(newMedia)) {
-    fs.rmSync(newMedia, { recursive: true, force: true }); // dossiers vides créés par une version récente
-    fs.renameSync(oldMedia, newMedia);
-  }
-}
-
 async function startServer() {
   if (await serverUp()) {
     console.log('Passerelle déjà active sur le port', PORT, ': on s\'y connecte.');
@@ -88,7 +69,6 @@ async function startServer() {
   for (const [name, p] of Object.entries(resources)) {
     if (!fs.existsSync(p)) throw new Error(`${name} introuvable : ${p}\nCompilez d'abord la passerelle (gateway/build.sh).`);
   }
-  migrateLegacy();
   const dataDir = app.getPath('userData');
   fs.mkdirSync(dataDir, { recursive: true });
   const log = fs.openSync(path.join(dataDir, 'passerelle.log'), 'a');
