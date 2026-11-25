@@ -136,7 +136,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
         </div>
         <span className="spacer" />
         {i > 0 && (
-          <button className="btn ghost" onClick={() => setI(i - 1)}>
+          <button className="btn" onClick={() => setI(i - 1)} aria-label="←">
             <ArrowLeft size={16} />
           </button>
         )}
