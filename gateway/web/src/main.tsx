@@ -12,6 +12,7 @@ import { Player } from './Player';
 import { Remote } from './Remote';
 import { Setup } from './Setup';
 import { Toasts } from './studio/Controls';
+import { Welcome, hasSeenWelcome } from './Welcome';
 import './styles.css';
 
 function useHash(): string {
@@ -27,6 +28,12 @@ function useHash(): string {
 function App() {
   const status = useStatus();
   const route = useHash();
+  const [welcome, setWelcome] = useState(() => !hasSeenWelcome());
+  useEffect(() => {
+    const on = () => setWelcome(true);
+    window.addEventListener('couchcast:welcome', on);
+    return () => window.removeEventListener('couchcast:welcome', on);
+  }, []);
 
   if (!status) {
     return (
@@ -45,7 +52,9 @@ function App() {
         <Player status={status} obs />
       ) : (
         <>
-          {status.state === 'unpaired' ? (
+          {welcome && route !== 'telecommande' ? (
+            <Welcome onDone={() => setWelcome(false)} />
+          ) : status.state === 'unpaired' ? (
             <Setup status={status} />
           ) : route === 'bibliotheque' ? (
             <Library status={status} />

@@ -8,6 +8,7 @@ import { LowLatencyAudio, lowLatencyAudioSupported } from './audio';
 import { useRefreshRate } from './display';
 import { ImageFilterDefs, cssFilter, setStreamHdr, useImageSettings } from './image';
 import { ShortcutHelp, useShortcuts, type ShortcutAction } from './shortcuts';
+import { Tour, hasSeenTour } from './Tour';
 import { ClipButton, PingMeter, RecButton, clip, toggleRecording } from './studio/Controls';
 import { IconButton, Kbd } from './ui';
 import { applySmoothing, connectViewer, detectTransfer, type Viewer, type ViewerStats } from './webrtc';
@@ -26,6 +27,7 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
   const [drawer, setDrawer] = useState<DrawerTab | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [touring, setTouring] = useState(() => !obs && !hasSeenTour());
   const [idle, setIdle] = useState(false);
   const [fullscreen, setFullscreen] = useState(!!document.fullscreenElement);
   const [gamepadOn, setGamepadOn] = useState(false);
@@ -238,7 +240,17 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
   }, [showVideo, status.settings.codec]);
   setStreamHdr(hdr);
 
-  const chromeHidden = idle && showVideo && !drawer && !showHelp;
+  const chromeHidden = idle && showVideo && !drawer && !showHelp && !touring;
+
+  // Relance de la visite depuis Réglages › App.
+  useEffect(() => {
+    const on = () => {
+      setDrawer(null);
+      setTouring(true);
+    };
+    window.addEventListener('couchcast:tour', on);
+    return () => window.removeEventListener('couchcast:tour', on);
+  }, []);
 
   if (obs) {
     return (
@@ -270,14 +282,20 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
             <span className="brand-mark" />
             <span className="brand-name">couchcast</span>
           </span>
-          <StatePill status={status} />
-          <span className="console-name">{status.console?.name}</span>
-          <PingMeter status={status} />
+          <span className="tour-group" data-tour="status">
+            <StatePill status={status} />
+            <span className="console-name">{status.console?.name}</span>
+            <PingMeter status={status} />
+          </span>
         </div>
 
         <div className="tb-group center">
-          <RecButton status={status} />
-          <ClipButton status={status} />
+          <span data-tour="rec">
+            <RecButton status={status} />
+          </span>
+          <span data-tour="clip">
+            <ClipButton status={status} />
+          </span>
         </div>
 
         <div className="tb-group right">
@@ -299,10 +317,10 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
               onClick={() => setGamepadOn((g) => !g)}
             />
           )}
-          <IconButton icon={Activity} label={t('bar.stats')} shortcut="T" active={showStats} onClick={() => setShowStats((s) => !s)} />
-          <IconButton icon={Clapperboard} label={t('bar.library')} shortcut="L" onClick={() => (location.hash = '#/bibliotheque')} />
-          <IconButton icon={Settings2} label={t('bar.settings')} shortcut="," active={!!drawer} onClick={() => setDrawer((d) => (d ? null : 'stream'))} />
-          <IconButton icon={Keyboard} label={t('bar.shortcuts')} shortcut="?" onClick={() => setShowHelp(true)} />
+          <IconButton data-tour="stats" icon={Activity} label={t('bar.stats')} shortcut="T" active={showStats} onClick={() => setShowStats((s) => !s)} />
+          <IconButton data-tour="library" icon={Clapperboard} label={t('bar.library')} shortcut="L" onClick={() => (location.hash = '#/bibliotheque')} />
+          <IconButton data-tour="settings" icon={Settings2} label={t('bar.settings')} shortcut="," active={!!drawer} onClick={() => setDrawer((d) => (d ? null : 'stream'))} />
+          <IconButton data-tour="shortcuts" icon={Keyboard} label={t('bar.shortcuts')} shortcut="?" onClick={() => setShowHelp(true)} />
           <IconButton icon={fullscreen ? Minimize : Maximize} label={t('bar.fullscreen')} shortcut="F" onClick={toggleFullscreen} />
           {sessionActive && <IconButton icon={Power} label={t('bar.stop')} shortcut="⇧ X" tone="danger" onClick={() => api.stop()} />}
         </div>
@@ -311,6 +329,7 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
       {showStats && <StatsHud status={status} viewer={viewerStats} audioLatency={audioRef.current ? audioRef.current.latencyMs() : null} />}
       {drawer && <Drawer status={status} tab={drawer} onTab={setDrawer} onClose={() => setDrawer(null)} />}
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
+      {touring && <Tour onDone={() => setTouring(false)} />}
     </div>
   );
 }

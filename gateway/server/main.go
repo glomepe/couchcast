@@ -101,6 +101,23 @@ type API struct {
 }
 
 func (a *API) Register(mux *http.ServeMux) {
+	// Adresses à donner aux autres appareils (téléphone, autre PC) : celle tournée vers
+	// la console d'abord, c'est forcément le réseau de la maison.
+	mux.HandleFunc("GET /api/lan", func(w http.ResponseWriter, r *http.Request) {
+		_, port, _ := net.SplitHostPort(r.Host)
+		if port == "" {
+			port = "80"
+		}
+		target := ""
+		if c := a.manager.config.Get().Console; c != nil {
+			target = c.Host
+		}
+		var urls []string
+		for _, ip := range homeIPs(target) {
+			urls = append(urls, "http://"+net.JoinHostPort(ip, port))
+		}
+		writeJSON(w, http.StatusOK, map[string][]string{"urls": urls})
+	})
 	mux.HandleFunc("GET /api/status", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, a.manager.Status())
 	})
@@ -360,6 +377,43 @@ func spaHandler(dir string) http.Handler {
 		}
 		fs.ServeHTTP(w, r)
 	})
+}
+
+// homeIPs : l'adresse locale utilisée pour joindre target (ou Internet), puis les autres
+// adresses privées. Écarte les interfaces virtuelles (Docker, VM, VPN) quand c'est possible.
+func homeIPs(target string) []string {
+	var ips []string
+	seen := map[string]bool{}
+	add := func(ip string) {
+		if ip != "" && !seen[ip] {
+			seen[ip] = true
+			ips = append(ips, ip)
+		}
+	}
+	for _, dest := range []string{target, "192.168.1.1", "1.1.1.1"} {
+		if dest == "" {
+			continue
+		}
+		// UDP : aucun paquet n'est envoyé, le système choisit juste l'interface de sortie.
+		if conn, err := net.Dial("udp4", net.JoinHostPort(dest, "9")); err == nil {
+			add(conn.LocalAddr().(*net.UDPAddr).IP.String())
+			conn.Close()
+			break
+		}
+	}
+	ifaces, _ := net.Interfaces()
+	for _, ifc := range ifaces {
+		if ifc.Flags&net.FlagUp == 0 || ifc.Flags&net.FlagLoopback != 0 || ifc.Flags&net.FlagPointToPoint != 0 {
+			continue
+		}
+		addrs, _ := ifc.Addrs()
+		for _, a := range addrs {
+			if n, ok := a.(*net.IPNet); ok && n.IP.To4() != nil && n.IP.IsPrivate() && n.IP.To4()[3] != 0 {
+				add(n.IP.String())
+			}
+		}
+	}
+	return ips
 }
 
 func lanIPs() []string {

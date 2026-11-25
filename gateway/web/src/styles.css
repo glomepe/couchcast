@@ -468,3 +468,35 @@ details .row { margin-top: 10px; }
 .cal-steps button.is-done { color: var(--ok); border-color: var(--ok); }
 .cal-panel input[type='range'] { width: 100%; height: 28px; }
 @media (max-width: 800px) { .calibration { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .cal-panel { border-left: none; border-top: 1px solid var(--line); } }
+
+/* --- Accueil --- */
+.welcome { min-height: 100%; max-width: 760px; margin: 0 auto; padding: 36px 24px 28px; display: grid; grid-template-rows: auto 1fr auto; gap: 24px; }
+.welcome-head { display: flex; align-items: center; gap: 12px; }
+.welcome-card { align-self: center; display: grid; gap: 14px; animation: rise 0.35s ease-out; }
+.welcome-icon { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 18px; background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(212, 255, 58, 0.25); }
+.welcome-card h1 { font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.03em; }
+.welcome-body { color: var(--muted); font-size: 17px; max-width: 620px; }
+.welcome-points { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 10px; }
+.welcome-points li { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-solid); font-size: 15px; }
+.welcome-points li svg { flex: none; margin-top: 2px; color: var(--accent); }
+.welcome-points li.ok { border-color: rgba(62, 224, 138, 0.35); }
+.welcome-points li.ok svg { color: var(--ok); }
+.welcome-points li.warn { border-color: rgba(255, 181, 46, 0.45); background: rgba(255, 181, 46, 0.06); }
+.welcome-points li.warn svg { color: var(--warn); }
+.welcome-foot { display: flex; align-items: center; gap: 10px; }
+.dots { display: flex; gap: 8px; }
+.dots button { width: 9px; height: 9px; padding: 0; border-radius: 50%; border: none; background: var(--line-2); }
+.dots button.is-active { width: 26px; border-radius: 99px; background: var(--accent); }
+
+/* --- Visite guidée --- */
+.tour { position: fixed; inset: 0; z-index: 90; }
+.tour-dim { position: absolute; inset: 0; background: rgba(4, 5, 7, 0.75); }
+.tour-spot { position: absolute; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(4, 5, 7, 0.75), 0 0 0 2px var(--accent); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: none; }
+.tour-bubble { position: absolute; width: 340px; display: grid; gap: 8px; padding: 18px; border-radius: 14px; background: var(--panel-solid); border: 1px solid var(--line-2); box-shadow: var(--shadow); animation: rise 0.2s ease-out; }
+.tour-bubble.centered { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 32px)); }
+.tour-bubble p { color: var(--muted); font-size: 14px; }
+.tour-group { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+
+.link-qr { display: flex; align-items: center; gap: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-solid); }
+.link-qr img { border-radius: 10px; background: #fff; flex: none; }
+.link-qr div { display: grid; gap: 6px; }

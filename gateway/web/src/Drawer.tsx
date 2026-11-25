@@ -1,3 +1,4 @@
+import QRCode from 'qrcode';
 import {
   AppWindow,
   Check,
@@ -25,6 +26,8 @@ import { useI18n } from './i18n';
 import { outputDeviceLatencyMs } from './audio';
 import { useRefreshRate } from './display';
 import { Calibration } from './Calibration';
+import { resetTour } from './Tour';
+import { resetWelcome } from './Welcome';
 import { NEUTRAL, PRESETS, setImageSettings, useImageSettings, useStreamHdr, type ImageSettings } from './image';
 import { ShortcutList } from './shortcuts';
 import { useElapsed } from './studio/Controls';
@@ -540,7 +543,21 @@ function DestinationForm(props: { initial: LiveDestination; onSave: (d: LiveDest
 
 function LinksTab() {
   const { t } = useI18n();
-  const base = `${location.protocol}//${location.host}`;
+  // Sur ce Mac la page est en localhost : inutilisable depuis un téléphone.
+  const [base, setBase] = useState(`${location.protocol}//${location.host}`);
+  const [qr, setQr] = useState('');
+  useEffect(() => {
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return;
+    fetch('/api/lan')
+      .then((r) => r.json())
+      .then((d: { urls?: string[] }) => d.urls?.[0] && setBase(d.urls[0]))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    QRCode.toDataURL(`${base}/#/telecommande`, { margin: 1, width: 360, color: { dark: '#0b0c0f', light: '#ffffff' } })
+      .then(setQr)
+      .catch(() => setQr(''));
+  }, [base]);
   const [copied, setCopied] = useState('');
   const copy = async (url: string) => {
     await navigator.clipboard.writeText(url);
@@ -554,6 +571,15 @@ function LinksTab() {
   ];
   return (
     <div className="stack">
+      {qr && (
+        <div className="link-qr">
+          <img src={qr} alt="" width={132} height={132} />
+          <div>
+            <strong>{t('links.qrTitle')}</strong>
+            <small className="muted">{t('links.qrHint')}</small>
+          </div>
+        </div>
+      )}
       {rows.map(({ icon: Icon, label, url, hint }) => (
         <div key={label} className="link-row">
           <Icon size={20} strokeWidth={1.6} />
@@ -588,6 +614,26 @@ function AppTab() {
           ]}
         />
       </Field>
+      <div className="row">
+        <button
+          className="btn"
+          onClick={() => {
+            resetWelcome();
+            window.dispatchEvent(new Event('couchcast:welcome'));
+          }}
+        >
+          {t('app.replayWelcome')}
+        </button>
+        <button
+          className="btn"
+          onClick={() => {
+            resetTour();
+            window.dispatchEvent(new Event('couchcast:tour'));
+          }}
+        >
+          {t('app.replayTour')}
+        </button>
+      </div>
       <hr />
       <h3>{t('app.shortcuts')}</h3>
       <ShortcutList />
