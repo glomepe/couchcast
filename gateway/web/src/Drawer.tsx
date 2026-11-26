@@ -25,7 +25,7 @@ import {
 import { useEffect, useState } from 'react';
 import { api, checkUpdate, formatClock, useUpdate, type LiveDestination, type LiveStatus, type Status, type StreamSettings, type StudioSettings } from './api';
 import { useI18n } from './i18n';
-import { outputDeviceLatencyMs } from './audio';
+import { lowLatencyAudioEnabled, outputDeviceLatencyMs, setLowLatencyAudio } from './audio';
 import { useRefreshRate } from './display';
 import { Calibration } from './Calibration';
 import { resetTour } from './Tour';
@@ -80,6 +80,7 @@ function supportsH265(): boolean {
 // --- Flux ----------------------------------------------------------------------
 
 function StreamTab({ status }: { status: Status }) {
+  const [lowAudio, setLowAudio] = useState(lowLatencyAudioEnabled);
   const { t } = useI18n();
   const [s, setS] = useState<StreamSettings>(status.settings);
   const [msg, setMsg] = useState('');
@@ -144,6 +145,15 @@ function StreamTab({ status }: { status: Status }) {
       {(s.codec === 'h265' || s.codec === 'h265-hdr') && !supportsH265() && <p className="error small">{t('stream.codecUnsupported')}</p>}
       {s.codec === 'h265-hdr' && !matchMedia('(dynamic-range: high)').matches && <p className="hint">{t('stream.hdrUnsupported')}</p>}
       <Toggle checked={s.control} onChange={(v) => setS({ ...s, control: v })} label={t('stream.control')} hint={t('stream.controlHint')} />
+      <Toggle
+        checked={lowAudio}
+        onChange={(v) => {
+          setLowAudio(v);
+          setLowLatencyAudio(v);
+        }}
+        label={t('stream.lowAudio')}
+        hint={t('stream.lowAudioHint')}
+      />
       <div className="row">
         <button className="btn primary" disabled={!dirty} onClick={save}>
           <Check size={16} /> {t('common.apply')}

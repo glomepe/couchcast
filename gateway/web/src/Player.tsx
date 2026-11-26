@@ -4,7 +4,7 @@ import { api, formatClock, useUpdate, type Status } from './api';
 import { Drawer, type DrawerTab } from './Drawer';
 import { startGamepadLoop } from './gamepad';
 import { useI18n } from './i18n';
-import { LowLatencyAudio, lowLatencyAudioSupported } from './audio';
+import { LowLatencyAudio, lowLatencyAudioEnabled, lowLatencyAudioSupported } from './audio';
 import { useRefreshRate } from './display';
 import { ImageFilterDefs, cssFilter, setStreamHdr, useImageSettings } from './image';
 import { ShortcutHelp, useShortcuts, type ShortcutAction } from './shortcuts';
@@ -51,7 +51,7 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
     setRtcError('');
     try {
       // Son basse latence (pas en mode OBS : OBS capture le son de l'élément vidéo).
-      const lowLatency = !obs && lowLatencyAudioSupported();
+      const lowLatency = !obs && lowLatencyAudioEnabled() && lowLatencyAudioSupported();
       const viewer = await connectViewer(videoRef.current, setRtcState, { lowLatencyAudio: lowLatency });
       viewerRef.current = viewer;
       if (lowLatency && viewer.audio) {
@@ -81,6 +81,17 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
   useEffect(() => {
     if (rtcState === 'failed') disconnect();
   }, [rtcState, disconnect]);
+
+  // Changement de mode audio : on se reconnecte pour (dé)brancher le canal basse latence.
+  useEffect(() => {
+    const on = () => {
+      if (!viewerRef.current) return;
+      disconnect();
+      connect();
+    };
+    window.addEventListener('couchcast:audiomode', on);
+    return () => window.removeEventListener('couchcast:audiomode', on);
+  }, [connect, disconnect]);
 
   // Lissage : tampon du navigateur ajusté en direct (le serveur borne l'extension playout-delay).
   const smoothing = status.settings.smoothing || 'balanced';
@@ -332,7 +343,7 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
         </div>
       </header>
 
-      {showStats && <StatsHud status={status} viewer={viewerStats} audioLatency={audioRef.current ? audioRef.current.latencyMs() : null} />}
+      {showStats && <StatsHud status={status} viewer={viewerStats} audioLatency={audioRef.current ? audioRef.current.latencyMs() : null} audio={audioRef.current?.stats ?? null} />}
       {drawer && <Drawer status={status} tab={drawer} onTab={setDrawer} onClose={() => setDrawer(null)} />}
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
       {touring && <Tour onDone={() => setTouring(false)} />}
@@ -431,7 +442,7 @@ function PinPrompt({ error }: { error?: string }) {
   );
 }
 
-function StatsHud({ status, viewer, audioLatency }: { status: Status; viewer: ViewerStats | null; audioLatency: number | null }) {
+function StatsHud({ status, viewer, audioLatency, audio }: { status: Status; viewer: ViewerStats | null; audioLatency: number | null; audio: LowLatencyAudio['stats'] | null }) {
   const { t } = useI18n();
   const hz = useRefreshRate();
   const s = status.stats;
@@ -459,6 +470,12 @@ function StatsHud({ status, viewer, audioLatency }: { status: Status; viewer: Vi
   const app = viewer ? viewer.pipelineMs : 0;
   const display = 1000 / hz / 2;
   const total = net + app + display;
+  if (audio)
+    rows.push([
+      t('stats.audioHealth'),
+      `${audio.underruns} ${t('stats.audioGaps')} · ${audio.lost + audio.late} ${t('stats.audioLost')} · ${audio.ratePct >= 0 ? '+' : ''}${audio.ratePct.toFixed(2)} % · ${t('stats.audioBurst')} ${audio.maxGapMs.toFixed(0)} ms · ${t('stats.audioMargin')} ${audio.marginMs} ms`,
+      audio.underruns > 3 ? 'warn' : undefined,
+    ]);
   rows.push([t('stats.audio'), `${s.audioKbps.toFixed(0)} kb/s`], [t('stats.viewers'), String(s.viewers)], [t('stats.uptime'), formatClock(s.uptimeS)]);
   return (
     <aside className="stats-hud mono">
