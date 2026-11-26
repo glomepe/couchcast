@@ -51,7 +51,8 @@ export async function connectViewer(
   const audio = opts.lowLatencyAudio ? pc.createDataChannel('audio', { ordered: false, maxRetransmits: 0 }) : null;
   if (audio) audio.binaryType = 'arraybuffer';
 
-  await pc.setLocalDescription(await pc.createOffer());
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription({ type: 'offer', sdp: opusStereo(offer.sdp!) });
   await iceGatheringComplete(pc);
   const res = await fetch('/api/webrtc', {
     method: 'POST',
@@ -63,7 +64,7 @@ export async function connectViewer(
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error ?? `HTTP ${res.status}`);
   }
-  await pc.setRemoteDescription({ type: 'answer', sdp: await res.text() });
+  await pc.setRemoteDescription({ type: 'answer', sdp: opusStereo(await res.text()) });
 
   let last = { at: 0, bytes: 0, jb: 0, jbCount: 0, decode: 0, processing: 0, decoded: 0 };
   return {
@@ -177,4 +178,14 @@ function iceGatheringComplete(pc: RTCPeerConnection): Promise<void> {
     pc.addEventListener('icegatheringstatechange', done);
     setTimeout(resolve, 2000); // les candidats hôte suffisent en local
   });
+}
+
+// Sans « stereo=1 » dans les paramètres Opus, Chrome décode le son en mono : la stéréo très
+// spatialisée des jeux, repliée en mono, sonne creuse, comme une réverbération.
+function opusStereo(sdp: string): string {
+  const pt = /a=rtpmap:(\d+) opus\/48000\/2/i.exec(sdp)?.[1];
+  if (!pt) return sdp;
+  return sdp.replace(new RegExp(`a=fmtp:${pt} ([^\\r\\n]*)`), (line, params: string) =>
+    /stereo=1/.test(params) ? line : `a=fmtp:${pt} ${params};stereo=1;sprop-stereo=1`,
+  );
 }
