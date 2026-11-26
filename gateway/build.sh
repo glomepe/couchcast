@@ -42,7 +42,8 @@ if [ ! -d third_party/chiaki-ng/.git ]; then
   git -C third_party/chiaki-ng -c core.autocrlf=false checkout -q "$CHIAKI_REV"
 fi
 git -C third_party/chiaki-ng -c core.autocrlf=false submodule update --init --depth 1 third-party/nanopb third-party/jerasure third-party/gf-complete
-# Patch « mode spectateur » (n'annonce pas de manette à la PS5), appliqué une seule fois.
+# Patch chiaki : mode spectateur (n'annonce pas de manette à la PS5) et son demandé en
+# stéréo (en 5.1, la PS5 renvoie un mixage replié qui sonne creux). Appliqué une seule fois.
 PATCH=../../patches/chiaki-spectator.patch
 if git -C third_party/chiaki-ng apply --check "$PATCH" 2>/dev/null; then
   git -C third_party/chiaki-ng apply "$PATCH"
