@@ -29,6 +29,8 @@
 #include <chiaki/regist.h>
 #include <chiaki/session.h>
 
+#include <opus.h>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -336,16 +338,62 @@ static bool video_cb(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool fr
 	return true;
 }
 
+static void audio_codec_reset(int frame_size);
+
 static void audio_header_cb(ChiakiAudioHeader *h, void *user)
 {
 	(void)user;
 	emit_event("{\"type\":\"audio_header\",\"channels\":%u,\"bits\":%u,\"rate\":%u,\"frame_size\":%u}", h->channels, h->bits, h->rate, h->frame_size);
+	audio_codec_reset((int)h->frame_size);
+}
+
+// Son : la PS5 encode en Opus 64 kb/s avec « intensity stereo », qui code les aigus d'un seul
+// bloc en inversant la phase d'un canal. Le décodeur standard (Chrome, ffmpeg) rejoue cette
+// inversion : aigus en opposition de phase, son creux. PS Remote Play désactive l'inversion
+// au décodage ; on fait pareil, puis on réencode à 256 kb/s sans inversion (transparent).
+#define AUDIO_RATE 48000
+#define AUDIO_CHANNELS 2
+#define AUDIO_MAX_FRAME 5760 // 120 ms
+static OpusDecoder *g_opus_dec;
+static OpusEncoder *g_opus_enc;
+static int g_audio_frame = 480;
+static opus_int16 g_pcm[AUDIO_MAX_FRAME * AUDIO_CHANNELS];
+
+static void audio_codec_reset(int frame_size)
+{
+	int err;
+	if(g_opus_dec) opus_decoder_destroy(g_opus_dec);
+	if(g_opus_enc) opus_encoder_destroy(g_opus_enc);
+	g_opus_dec = opus_decoder_create(AUDIO_RATE, AUDIO_CHANNELS, &err);
+	if(g_opus_dec)
+		opus_decoder_ctl(g_opus_dec, OPUS_SET_PHASE_INVERSION_DISABLED(1));
+	g_opus_enc = opus_encoder_create(AUDIO_RATE, AUDIO_CHANNELS, OPUS_APPLICATION_RESTRICTED_LOWDELAY, &err);
+	if(g_opus_enc)
+	{
+		opus_encoder_ctl(g_opus_enc, OPUS_SET_BITRATE(256000));
+		opus_encoder_ctl(g_opus_enc, OPUS_SET_COMPLEXITY(10));
+		opus_encoder_ctl(g_opus_enc, OPUS_SET_PHASE_INVERSION_DISABLED(1));
+		opus_encoder_ctl(g_opus_enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_MUSIC));
+	}
+	g_audio_frame = frame_size > 0 && frame_size <= AUDIO_MAX_FRAME ? frame_size : 480;
 }
 
 static void audio_frame_cb(uint8_t *buf, size_t buf_size, void *user)
 {
 	(void)user;
-	emit(PKT_AUDIO, buf, buf_size);
+	if(!g_opus_dec || !g_opus_enc)
+	{
+		emit(PKT_AUDIO, buf, buf_size);
+		return;
+	}
+	// buf NULL : trame perdue, l'Opus la reconstitue (PLC) comme le fait chiaki-ng.
+	int n = opus_decode(g_opus_dec, buf_size ? buf : NULL, (opus_int32)buf_size, g_pcm, g_audio_frame, 0);
+	if(n <= 0)
+		return;
+	uint8_t out[1500];
+	int len = opus_encode(g_opus_enc, g_pcm, n, out, sizeof(out));
+	if(len > 0)
+		emit(PKT_AUDIO, out, (size_t)len);
 }
 
 static void event_cb(ChiakiEvent *event, void *user)
