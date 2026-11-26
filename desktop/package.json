@@ -48,19 +48,6 @@
       }
     },
     "artifactName": "Couchcast-${os}-${arch}.${ext}",
-    "win": {
-      "icon": "assets/icon.png",
-      "target": [
-        "nsis",
-        "zip"
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "perMachine": false,
-      "createDesktopShortcut": true
-    },
     "dmg": {
       "title": "Couchcast"
     }

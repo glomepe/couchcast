@@ -29,21 +29,6 @@ var encoderCandidates = map[string][]videoEncoder{
 			return a
 		}},
 	},
-	"windows": {
-		{"h264_nvenc", func(live bool) []string { // NVIDIA
-			if live {
-				return []string{"-preset", "p4", "-tune", "ll", "-rc", "cbr", "-pix_fmt", "yuv420p"}
-			}
-			return []string{"-preset", "p5", "-pix_fmt", "yuv420p"}
-		}},
-		{"h264_qsv", func(bool) []string { return []string{"-preset", "veryfast", "-pix_fmt", "nv12"} }}, // Intel
-		{"h264_amf", func(live bool) []string { // AMD
-			if live {
-				return []string{"-usage", "lowlatency", "-quality", "speed", "-pix_fmt", "nv12"}
-			}
-			return []string{"-quality", "balanced", "-pix_fmt", "nv12"}
-		}},
-	},
 	"linux": {
 		{"h264_nvenc", func(bool) []string { return []string{"-preset", "p4", "-pix_fmt", "yuv420p"} }},
 	},

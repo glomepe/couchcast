@@ -22,7 +22,7 @@ import (
 
 func main() {
 	listen := flag.String("listen", ":8765", "adresse HTTP d'écoute")
-	bridgePath := flag.String("bridge", "build/bridge/"+exe("couchcast-bridge"), "chemin du binaire couchcast-bridge")
+	bridgePath := flag.String("bridge", "build/bridge/couchcast-bridge", "chemin du binaire couchcast-bridge")
 	dataPath := flag.String("config", "data/config.json", "fichier de configuration (console appairée)")
 	webDir := flag.String("web", "web/dist", "dossier de l'interface compilée")
 	mediaDir := flag.String("media", defaultMediaDir(), "dossier des clips et enregistrements")
@@ -167,7 +167,7 @@ func (a *API) Register(mux *http.ServeMux) {
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/webrtc", a.webrtcOffer)
-	// Arrêt propre demandé par l'app de bureau (Windows n'a pas de SIGTERM),
+	// Arrêt propre demandé par l'app de bureau,
 	// accepté seulement depuis la machine elle-même.
 	mux.HandleFunc("POST /api/shutdown", func(w http.ResponseWriter, r *http.Request) {
 		host, _, _ := net.SplitHostPort(r.RemoteAddr)

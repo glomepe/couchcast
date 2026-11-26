@@ -110,7 +110,7 @@
     .node span { color: var(--muted); font-size: 14px; }
     .node code { display: inline-block; margin-top: 8px; font-size: 12px; color: var(--accent); }
 
-    .install { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 40px; }
+    .install { display: grid; grid-template-columns: minmax(0, 560px); gap: 16px; margin-top: 40px; }
     .os { padding: 26px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
     .os h3 { display: flex; align-items: center; gap: 10px; font: 700 22px var(--display); margin: 0 0 14px; }
     .os ol { margin: 0 0 18px; padding-left: 20px; color: var(--muted); }
@@ -189,11 +189,6 @@
           <span lang="en">Download for macOS</span><span lang="fr">Télécharger pour macOS</span>
           <small>Apple Silicon</small>
         </a>
-        <a class="btn" href="https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-win-x64.exe">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.4 4.5v7H3zm8.4-1.1L21 3v8.5h-9.6zM3 12.5h7.4v7L3 18.5zm8.4 0H21V21l-9.6-1.3z"/></svg>
-          <span lang="en">Download for Windows</span><span lang="fr">Télécharger pour Windows</span>
-          <small>x64</small>
-        </a>
       </div>
       <p class="fine">
         <span lang="en">Free & open source (AGPL-3.0) · <a href="https://github.com/glomepe/couchcast/releases">all releases</a> · not affiliated with Sony</span>
@@ -204,7 +199,7 @@
       <div class="stats reveal">
         <div class="stat"><b>1080p60</b><span lang="en">PS5 Remote Play, H.264 + Opus</span><span lang="fr">Remote Play PS5, H.264 + Opus</span></div>
         <div class="stat"><b>~2&nbsp;ms</b><span lang="en">browser buffer, measured</span><span lang="fr">de tampon navigateur, mesuré</span></div>
-        <div class="stat"><b>0</b><span lang="en">re-encode on the viewing path</span><span lang="fr">réencodage pour l'affichage</span></div>
+        <div class="stat"><b>0</b><span lang="en">video re-encode on the viewing path</span><span lang="fr">réencodage vidéo pour l'affichage</span></div>
         <div class="stat"><b>15 s → 5 min</b><span lang="en">instant replay clips</span><span lang="fr">clips de replay instantané</span></div>
       </div>
     </div>
@@ -214,7 +209,7 @@
     <div class="wrap">
       <span class="kicker"><span lang="en">Features</span><span lang="fr">Fonctionnalités</span></span>
       <h2><span lang="en">A small broadcast studio for your console.</span><span lang="fr">Un petit studio de diffusion pour votre console.</span></h2>
-      <p class="sub"><span lang="en">Couchcast speaks the PS5's own Remote Play protocol and forwards the stream as-is. Everything else is built around it.</span><span lang="fr">Couchcast parle le protocole Remote Play de la PS5 et transmet le flux tel quel. Tout le reste est construit autour.</span></p>
+      <p class="sub"><span lang="en">Couchcast speaks the PS5's own Remote Play protocol and forwards the video as-is. Everything else is built around it.</span><span lang="fr">Couchcast parle le protocole Remote Play de la PS5 et transmet la vidéo telle quelle. Tout le reste est construit autour.</span></p>
       <div class="features">
         <article class="feature reveal">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
@@ -273,7 +268,7 @@
   <section id="how">
     <div class="wrap">
       <span class="kicker"><span lang="en">How it works</span><span lang="fr">Fonctionnement</span></span>
-      <h2><span lang="en">No re-encode between the console and your eyes.</span><span lang="fr">Aucun réencodage entre la console et vos yeux.</span></h2>
+      <h2><span lang="en">No video re-encode between the console and your eyes.</span><span lang="fr">Aucun réencodage vidéo entre la console et vos yeux.</span></h2>
       <div class="pipeline">
         <div class="node reveal"><b>PS5</b><span lang="en">Encodes the picture for Remote Play.</span><span lang="fr">Encode l'image pour le Remote Play.</span><br /><code>H.264 + Opus</code></div>
         <div class="node reveal"><b>Bridge</b><span lang="en">C, built on chiaki-ng: pairing, wake-up, stream.</span><span lang="fr">En C, basé sur chiaki-ng : appairage, réveil, flux.</span><br /><code>couchcast-bridge</code></div>
@@ -301,20 +296,6 @@
             <li>Si macOS dit que l'app est « endommagée », lancez une fois :<pre>xattr -dr com.apple.quarantine /Applications/Couchcast.app</pre></li>
           </ol>
           <a class="btn primary" href="https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-mac-arm64.dmg"><span lang="en">Download .dmg</span><span lang="fr">Télécharger le .dmg</span></a>
-        </div>
-        <div class="os reveal">
-          <h3>Windows <span class="fine">10 / 11 · x64</span></h3>
-          <ol lang="en">
-            <li>Download the <b>installer</b> (or the portable <b>.zip</b>) and run it.</li>
-            <li>SmartScreen may warn about an unsigned app: <b>More info › Run anyway</b>.</li>
-            <li>Allow Couchcast on <b>private networks</b> when the firewall asks.</li>
-          </ol>
-          <ol lang="fr">
-            <li>Téléchargez l'<b>installateur</b> (ou le <b>.zip</b> portable) et lancez-le.</li>
-            <li>SmartScreen peut signaler une app non signée : <b>Informations complémentaires › Exécuter quand même</b>.</li>
-            <li>Autorisez Couchcast sur les <b>réseaux privés</b> quand le pare-feu le demande.</li>
-          </ol>
-          <a class="btn" href="https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-win-x64.exe"><span lang="en">Download installer</span><span lang="fr">Télécharger l'installateur</span></a>
         </div>
       </div>
       <p class="sub" style="margin-top: 22px">

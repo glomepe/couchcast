@@ -20,19 +20,6 @@ index e90ecea..b5c2c2a 100644
  	} connect_info;
  
  	ChiakiTarget target;
-diff --git a/lib/src/launchspec.c b/lib/src/launchspec.c
-index abed382..7c371bd 100644
---- a/lib/src/launchspec.c
-+++ b/lib/src/launchspec.c
-@@ -44,7 +44,7 @@ static const char launchspec_fmt[] =
- 		"},\"requestGameSpecification\":{"
- 			"\"model\":\"bravia_tv\","
- 			"\"platform\":\"android\","
--			"\"audioChannels\":\"5.1\","
-+			"\"audioChannels\":\"2.0\","
- 			"\"language\":\"sp\","
- 			"\"acceptButton\":\"X\","
- 			"\"connectedControllers\":[\"xinput\",\"ds3\",\"ds4\"],"
 diff --git a/lib/src/session.c b/lib/src/session.c
 index 41c6bbf..da5db38 100644
 --- a/lib/src/session.c

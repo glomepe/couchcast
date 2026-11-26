@@ -22,7 +22,7 @@
 - [Remerciements](#remerciements)
 - [Licence et marques](#licence-et-marques)
 
-Couchcast parle le protocole **Remote Play** de la PS5 (via la bibliothèque de [chiaki-ng](https://github.com/streetpea/chiaki-ng)). Il transmet la vidéo H.264 et le son Opus de la console **tels quels** en WebRTC, sans réencodage : la latence ajoutée est de quelques millisecondes et le Mac ne travaille presque pas.
+Couchcast parle le protocole **Remote Play** de la PS5 (via la bibliothèque de [chiaki-ng](https://github.com/streetpea/chiaki-ng)). Il transmet la vidéo de la console **telle quelle** en WebRTC, sans réencodage : la latence ajoutée est de quelques millisecondes et le Mac ne travaille presque pas. Le son est décodé comme le fait PS Remote Play (sans l'inversion de phase d'Opus, qui le rend sinon creux), puis réencodé en Opus à haut débit.
 
 ## Fonctionnalités
 
@@ -35,7 +35,7 @@ Couchcast parle le protocole **Remote Play** de la PS5 (via la bibliothèque de 
 - **Bibliothèque** avec miniatures, lecture, téléchargement, export vertical et ouverture dans le Finder.
 - **Télécommande sur téléphone** : démarrer la session, enregistrer et clipper sans quitter la TV des yeux.
 - **Source OBS** : une adresse « propre » (image + son, sans interface) à ajouter comme source navigateur.
-- **App de bureau macOS et Windows** : icône dans la barre des menus ou des tâches, raccourcis globaux, notifications, anti-veille.
+- **App de bureau macOS** : icône dans la barre des menus, raccourcis globaux, notifications, anti-veille.
 - Interface **français / anglais**, au choix dans l'app.
 
 ## Fonctionnement
@@ -65,26 +65,23 @@ Récupérez la dernière version sur la **[page des Releases](https://github.com
 | Système | Fichier |
 |---|---|
 | macOS (Apple Silicon, M1 et suivants) | [`Couchcast-mac-arm64.dmg`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-mac-arm64.dmg) |
-| Windows 10/11 (x64) | [`Couchcast-win-x64.exe`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-win-x64.exe) (installateur) ou [`.zip`](https://github.com/glomepe/couchcast/releases/latest/download/Couchcast-win-x64.zip) (portable) |
 
 ffmpeg et toutes les bibliothèques sont inclus. Il n'y a rien d'autre à installer.
 
 ### Ouvrir l'app la première fois
 
-L'app **n'est pas signée** par Apple ni par Microsoft (ces certificats sont payants), donc le système vous avertit la première fois :
+L'app **n'est pas signée** par Apple (le certificat est payant), donc macOS vous avertit la première fois. Ouvrez le `.dmg` et glissez *Couchcast* dans *Applications*. Lancez-la une fois : macOS refuse. Allez alors dans **Réglages Système › Confidentialité et sécurité**, descendez jusqu'au message concernant Couchcast et cliquez sur **Ouvrir quand même**. Si macOS affirme que l'app « est endommagée », lancez une fois dans le Terminal :
 
-- **macOS.** Ouvrez le `.dmg` et glissez *Couchcast* dans *Applications*. Lancez-la une fois : macOS refuse. Allez alors dans **Réglages Système › Confidentialité et sécurité**, descendez jusqu'au message concernant Couchcast et cliquez sur **Ouvrir quand même**. Si macOS affirme que l'app « est endommagée », lancez une fois dans le Terminal :
-  ```sh
-  xattr -dr com.apple.quarantine /Applications/Couchcast.app
-  ```
-- **Windows.** Si SmartScreen affiche « Windows a protégé votre ordinateur », cliquez sur **Informations complémentaires › Exécuter quand même**. Autorisez Couchcast sur les **réseaux privés** quand le pare-feu le demande : c'est ce qui permet à la PS5, au téléphone et à OBS de le joindre.
+```sh
+xattr -dr com.apple.quarantine /Applications/Couchcast.app
+```
 
 ## Prérequis
 
-- **macOS sur Apple Silicon** ou **Windows 10/11 x64**. L'usage et les tests se font sur macOS ; la version Windows est compilée par la CI mais a encore très peu servi en conditions réelles.
+- **macOS sur Apple Silicon** (M1 et suivants). Windows n'est pas pris en charge.
 - Une **PS5** avec la lecture à distance activée (*Paramètres › Système › Lecture à distance*).
 - Un **second compte PSN**, connecté sur la PS5 (voir plus bas).
-- Pour les exports verticaux et les lives réencodés, Couchcast utilise l'encodeur matériel disponible : VideoToolbox sur Mac ; NVENC, Quick Sync ou AMF sous Windows. À défaut, il se rabat sur x264, sur le processeur.
+- Pour les exports verticaux et les lives réencodés, Couchcast utilise l'encodeur matériel du Mac (VideoToolbox), avec x264 sur le processeur en secours.
 
 ## Compiler depuis les sources
 
@@ -95,14 +92,7 @@ git clone https://github.com/glomepe/couchcast && cd couchcast
 desktop/build-app.sh --install    # compile tout et copie Couchcast.app dans /Applications
 ```
 
-**Windows** : il faut [MSYS2](https://www.msys2.org), [Go](https://go.dev/dl/) et [Node.js 22+](https://nodejs.org). Dans un terminal **MSYS2 UCRT64** lancé avec le PATH de Windows (`MSYS2_PATH_TYPE=inherit`) :
-
-```sh
-git clone https://github.com/glomepe/couchcast && cd couchcast
-gateway/build.sh && cd desktop && npm ci && ./package.sh    # installateur dans desktop/dist/
-```
-
-**Serveur seul** (sans l'app de bureau, avec n'importe quel navigateur) : `cd gateway && ./build.sh && ./run.sh`, puis `http://<ip-de-l-ordinateur>:8765/`. ffmpeg doit alors être installé et dans le PATH (`brew install ffmpeg` / `winget install ffmpeg`).
+**Serveur seul** (sans l'app de bureau, avec n'importe quel navigateur) : `cd gateway && ./build.sh && ./run.sh`, puis `http://<ip-de-l-ordinateur>:8765/`. ffmpeg doit alors être installé et dans le PATH (`brew install ffmpeg`).
 
 Les versions téléchargeables sont produites par le workflow [Build & release](.github/workflows/release.yml) : poussez un tag `v*`, ou lancez-le à la main depuis l'onglet *Actions*.
 
@@ -148,7 +138,7 @@ L'app et le navigateur n'ajoutent presque rien : environ 2 ms de tampon et envir
 - **H.265 et HDR** sont disponibles (Réglages › Flux › Codec) : image plus fine à débit égal, et HDR10 sur un écran HDR. Il faut l'app de bureau ou un Chrome/Edge récent ; le H.264 passe partout.
 - Les applis protégées par DRM (Netflix…) ne sont pas transmises par Remote Play.
 - Certains messages d'erreur du serveur n'existent qu'en français.
-- Usage et tests au quotidien sous macOS 26 / M4 Pro. La version Windows compile dans la CI mais a encore peu servi en conditions réelles.
+- Usage et tests au quotidien sous macOS 26 / M4 Pro. macOS uniquement : le support de Windows a été abandonné.
 
 ## Remerciements
 

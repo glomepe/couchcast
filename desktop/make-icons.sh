@@ -15,10 +15,6 @@ ffmpeg -v error -y -f lavfi -i "color=c=black@0:s=44x44,format=rgba" -frames:v 1
   -vf "geq=r=239:g=83:b=80:a='if(lt(hypot(X-21.5,Y-21.5),14),255,0)'" trayRec@2x.png
 ffmpeg -v error -y -i trayRec@2x.png -vf scale=22:22 trayRec.png
 
-# Icône de la barre des tâches Windows (pas de recoloration par le système) : anneau blanc + point chartreuse.
-ffmpeg -v error -y -f lavfi -i "color=c=black@0:s=32x32,format=rgba" -frames:v 1 \
-  -vf "geq=r='if(lt(hypot(X-15.5,Y-15.5),6),212,255)':g='255':b='if(lt(hypot(X-15.5,Y-15.5),6),58,255)':a='if(lt(hypot(X-15.5,Y-15.5),6)+between(hypot(X-15.5,Y-15.5),10,14),255,0)'" trayWin.png
-
 # Icône d'application 1024 px : carré arrondi dégradé, anneau et point blancs.
 ffmpeg -v error -y -f lavfi -i "color=c=black:s=1024x1024,format=rgba" -frames:v 1 -vf "geq=\
 r='if(lt(hypot(X-512,Y-512),150)+between(hypot(X-512,Y-512),250,330),255,20+40*Y/1024)':\

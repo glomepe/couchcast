@@ -7,14 +7,6 @@ import (
 	"runtime"
 )
 
-// exe ajoute l'extension des exécutables du système (.exe sous Windows).
-func exe(name string) string {
-	if runtime.GOOS == "windows" {
-		return name + ".exe"
-	}
-	return name
-}
-
 // defaultMediaDir : ~/Movies/Couchcast sur macOS, ~/Videos/Couchcast ailleurs.
 func defaultMediaDir() string {
 	home, _ := os.UserHomeDir()
@@ -29,10 +21,6 @@ func revealFile(path string) error {
 	switch runtime.GOOS {
 	case "darwin":
 		return exec.Command("open", "-R", path).Run()
-	case "windows":
-		// explorer renvoie un code non nul même quand tout va bien.
-		_ = exec.Command("explorer", "/select,", path).Run()
-		return nil
 	default:
 		return exec.Command("xdg-open", filepath.Dir(path)).Run()
 	}
@@ -52,7 +40,7 @@ func locateFFmpeg(dir string) {
 		name string
 		dst  *string
 	}{{"ffmpeg", &ffmpegBin}, {"ffprobe", &ffprobeBin}} {
-		if p := filepath.Join(dir, exe(t.name)); dir != "" && fileExists(p) {
+		if p := filepath.Join(dir, t.name); dir != "" && fileExists(p) {
 			*t.dst = p
 		} else if p, err := exec.LookPath(t.name); err == nil {
 			*t.dst = p

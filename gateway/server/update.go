@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -60,11 +59,7 @@ func (u *Updater) Check(force bool) UpdateInfo {
 			info.Latest = strings.TrimPrefix(rel.Tag, "v")
 			info.URL = rel.URL
 			info.Available = u.current != "dev" && newerVersion(info.Latest, u.current)
-			asset := "Couchcast-mac-arm64.dmg"
-			if runtime.GOOS == "windows" {
-				asset = "Couchcast-win-x64.exe"
-			}
-			info.Download = "https://github.com/" + releasesRepo + "/releases/download/" + rel.Tag + "/" + asset
+			info.Download = "https://github.com/" + releasesRepo + "/releases/download/" + rel.Tag + "/Couchcast-mac-arm64.dmg"
 		}
 	}
 	info.CheckedAt = time.Now().Unix()

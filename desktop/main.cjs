@@ -26,22 +26,20 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 const IS_MAC = process.platform === 'darwin';
-const IS_WIN = process.platform === 'win32';
-const EXE = IS_WIN ? '.exe' : '';
 
 // Version empaquetée : tout est dans Resources/bin (serveur, pont, bibliothèques, ffmpeg).
 // En développement : binaires compilés par gateway/build.sh.
 const resources = app.isPackaged
   ? {
-      server: path.join(process.resourcesPath, 'bin', `couchcast-server${EXE}`),
-      bridge: path.join(process.resourcesPath, 'bin', `couchcast-bridge${EXE}`),
+      server: path.join(process.resourcesPath, 'bin', `couchcast-server`),
+      bridge: path.join(process.resourcesPath, 'bin', `couchcast-bridge`),
       web: path.join(process.resourcesPath, 'web'),
     }
   : (() => {
       const gw = path.join(__dirname, '..', 'gateway');
       return {
-        server: path.join(gw, 'build', `couchcast-server${EXE}`),
-        bridge: path.join(gw, 'build', 'bridge', `couchcast-bridge${EXE}`),
+        server: path.join(gw, 'build', `couchcast-server`),
+        bridge: path.join(gw, 'build', 'bridge', `couchcast-bridge`),
         web: path.join(gw, 'web', 'dist'),
       };
     })();
@@ -92,7 +90,6 @@ async function startServer() {
     {
       // Lancée depuis le Finder, l'app n'a pas le PATH du terminal (ffmpeg Homebrew en développement).
       env: IS_MAC ? { ...process.env, PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || '/usr/bin:/bin'}` } : process.env,
-      windowsHide: true,
       stdio: ['ignore', log, log],
     },
   );
@@ -119,7 +116,7 @@ function stopServer() {
       clearTimeout(timer);
       resolve();
     });
-    // Arrêt propre par l'API (Windows n'a pas de SIGTERM) : la session Remote Play est fermée.
+    // Arrêt propre par l'API : la session Remote Play est fermée.
     post('/api/shutdown').catch(() => proc.kill('SIGTERM'));
   });
 }
@@ -134,8 +131,6 @@ function createWindow() {
     minHeight: 480,
     backgroundColor: '#0a0b0d',
     title: 'Couchcast',
-    autoHideMenuBar: IS_WIN, // menu accessible avec Alt
-    icon: IS_WIN ? path.join(__dirname, 'assets', 'icon.png') : undefined,
     webPreferences: {
       // Son actif sans clic préalable, et décodage non ralenti quand la fenêtre est en arrière-plan.
       autoplayPolicy: 'no-user-gesture-required',
@@ -259,8 +254,8 @@ function lang() {
 const L = () => TXT[lang()];
 
 function trayIcon(recording) {
-  // macOS recolore les icônes « template » ; Windows affiche une icône claire telle quelle.
-  const file = recording ? 'trayRec.png' : IS_MAC ? 'trayTemplate.png' : 'trayWin.png';
+  // macOS recolore les icônes « template » (pas l'icône rouge d'enregistrement).
+  const file = recording ? 'trayRec.png' : 'trayTemplate.png';
   const img = nativeImage.createFromPath(path.join(__dirname, 'assets', file));
   if (IS_MAC) img.setTemplateImage(!recording);
   return img;
@@ -431,7 +426,6 @@ app.on('before-quit', async (e) => {
 app.whenReady().then(async () => {
   app.setName('Couchcast');
   if (IS_MAC) app.dock.setIcon(path.join(__dirname, 'assets', 'icon.png'));
-  if (IS_WIN) app.setAppUserModelId('app.couchcast.desktop'); // notifications Windows
 
   buildAppMenu();
 
