@@ -1,7 +1,7 @@
 {
   "name": "couchcast-desktop",
   "productName": "Couchcast",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "PS5 → navigateur : flux, clips, enregistrement et live",
   "main": "main.cjs",
