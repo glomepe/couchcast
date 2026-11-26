@@ -1,6 +1,6 @@
-import { Activity, Clapperboard, Gamepad2, Keyboard, Maximize, Minimize, Power, Settings2, Volume2, VolumeX } from 'lucide-react';
+import { Activity, ArrowDownToLine, Clapperboard, Gamepad2, Keyboard, Maximize, Minimize, Power, Settings2, Volume2, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, formatClock, type Status } from './api';
+import { api, formatClock, useUpdate, type Status } from './api';
 import { Drawer, type DrawerTab } from './Drawer';
 import { startGamepadLoop } from './gamepad';
 import { useI18n } from './i18n';
@@ -27,6 +27,7 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
   const [drawer, setDrawer] = useState<DrawerTab | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const update = useUpdate();
   const [touring, setTouring] = useState(() => !obs && !hasSeenTour());
   const [idle, setIdle] = useState(false);
   const [fullscreen, setFullscreen] = useState(!!document.fullscreenElement);
@@ -316,6 +317,11 @@ export function Player({ status, obs = false }: { status: Status; obs?: boolean 
               active={gamepadOn}
               onClick={() => setGamepadOn((g) => !g)}
             />
+          )}
+          {update?.available && !obs && (
+            <button className="update-pill" onClick={() => setDrawer('app')} title={t('update.available', { v: update.latest ?? '' })}>
+              <ArrowDownToLine size={14} /> {t('update.short')}
+            </button>
           )}
           <IconButton data-tour="stats" icon={Activity} label={t('bar.stats')} shortcut="T" active={showStats} onClick={() => setShowStats((s) => !s)} />
           <IconButton data-tour="library" icon={Clapperboard} label={t('bar.library')} shortcut="L" onClick={() => (location.hash = '#/bibliotheque')} />

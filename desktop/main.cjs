@@ -88,7 +88,7 @@ async function startServer() {
   const log = fs.openSync(path.join(dataDir, 'passerelle.log'), 'a');
   server = spawn(
     resources.server,
-    ['-listen', `:${PORT}`, '-bridge', resources.bridge, '-web', resources.web, '-config', path.join(dataDir, 'config.json')],
+    ['-listen', `:${PORT}`, '-version', app.getVersion(), '-bridge', resources.bridge, '-web', resources.web, '-config', path.join(dataDir, 'config.json')],
     {
       // Lancée depuis le Finder, l'app n'a pas le PATH du terminal (ffmpeg Homebrew en développement).
       env: IS_MAC ? { ...process.env, PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || '/usr/bin:/bin'}` } : process.env,

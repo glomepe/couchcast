@@ -188,3 +188,43 @@ export function useStatus(): Status | null {
   }, []);
   return status;
 }
+
+// --- Mises à jour -------------------------------------------------------------------
+
+export interface UpdateInfo {
+  current: string;
+  latest?: string;
+  available: boolean;
+  url?: string;
+  download?: string;
+  error?: string;
+}
+
+let updateCache: UpdateInfo | null = null;
+const updateSubs = new Set<(u: UpdateInfo) => void>();
+
+export async function checkUpdate(force = false): Promise<UpdateInfo | null> {
+  try {
+    const r = await fetch(`/api/update${force ? '?force=1' : ''}`);
+    if (!r.ok) return updateCache;
+    updateCache = (await r.json()) as UpdateInfo;
+    updateSubs.forEach((f) => f(updateCache!));
+  } catch {
+    /* hors ligne : on garde la dernière réponse */
+  }
+  return updateCache;
+}
+
+export function useUpdate(): UpdateInfo | null {
+  const [info, setInfo] = useState(updateCache);
+  useEffect(() => {
+    updateSubs.add(setInfo);
+    if (!updateCache) checkUpdate();
+    const id = setInterval(() => checkUpdate(), 6 * 3600 * 1000);
+    return () => {
+      updateSubs.delete(setInfo);
+      clearInterval(id);
+    };
+  }, []);
+  return info;
+}

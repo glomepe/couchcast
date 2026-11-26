@@ -38,6 +38,8 @@ export async function connectViewer(
     lowLatency(t.receiver);
   }
   pc.ontrack = (e) => {
+    // Son basse latence : la piste audio WebRTC n'est pas jouée (sinon on l'entend deux fois).
+    if (e.track.kind === 'audio' && opts.lowLatencyAudio) return;
     stream.addTrack(e.track);
     lowLatency(e.receiver);
   };

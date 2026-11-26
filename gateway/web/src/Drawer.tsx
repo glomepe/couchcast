@@ -1,5 +1,7 @@
 import QRCode from 'qrcode';
 import {
+  RefreshCw,
+  ArrowDownToLine,
   AppWindow,
   Check,
   Clapperboard,
@@ -21,7 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { api, formatClock, type LiveDestination, type LiveStatus, type Status, type StreamSettings, type StudioSettings } from './api';
+import { api, checkUpdate, formatClock, useUpdate, type LiveDestination, type LiveStatus, type Status, type StreamSettings, type StudioSettings } from './api';
 import { useI18n } from './i18n';
 import { outputDeviceLatencyMs } from './audio';
 import { useRefreshRate } from './display';
@@ -600,10 +602,55 @@ function LinksTab() {
 
 // --- App -----------------------------------------------------------------------------
 
+function UpdateCard() {
+  const { t } = useI18n();
+  const info = useUpdate();
+  const [checking, setChecking] = useState(false);
+  const recheck = async () => {
+    setChecking(true);
+    await checkUpdate(true);
+    setChecking(false);
+  };
+  if (!info) return null;
+  return (
+    <div className={`update-card ${info.available ? 'is-new' : ''}`}>
+      <div className="update-info">
+        <strong>
+          {info.available ? t('update.available', { v: info.latest ?? '' }) : t('update.version', { v: info.current })}
+        </strong>
+        <small className="muted">
+          {info.available
+            ? t('update.current', { v: info.current })
+            : info.error
+              ? t('update.error')
+              : info.current === 'dev'
+                ? t('update.dev', { v: info.latest ?? '?' })
+                : t('update.upToDate')}
+        </small>
+      </div>
+      {info.available ? (
+        <>
+          <a className="btn" href={info.url} target="_blank" rel="noreferrer">
+            {t('update.notes')}
+          </a>
+          <a className="btn primary" href={info.download} target="_blank" rel="noreferrer">
+            <ArrowDownToLine size={15} /> {t('update.download')}
+          </a>
+        </>
+      ) : (
+        <button className="btn" onClick={recheck} disabled={checking}>
+          <RefreshCw size={15} className={checking ? 'spin' : undefined} /> {t('update.check')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function AppTab() {
   const { t, lang, setLang } = useI18n();
   return (
     <div className="stack">
+      <UpdateCard />
       <Field label={t('app.language')}>
         <Segmented
           value={lang}

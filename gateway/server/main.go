@@ -27,7 +27,9 @@ func main() {
 	webDir := flag.String("web", "web/dist", "dossier de l'interface compilée")
 	mediaDir := flag.String("media", defaultMediaDir(), "dossier des clips et enregistrements")
 	ffmpegDir := flag.String("ffmpeg-dir", "", "dossier contenant ffmpeg et ffprobe (par défaut : à côté du serveur, sinon le PATH)")
+	version := flag.String("version", "dev", "version de l'app (transmise par l'app de bureau)")
 	flag.Parse()
+	updater = &Updater{current: *version}
 
 	locateFFmpeg(*ffmpegDir)
 	go pickEncoder() // test des encodeurs matériels en arrière-plan
@@ -117,6 +119,9 @@ func (a *API) Register(mux *http.ServeMux) {
 			urls = append(urls, "http://"+net.JoinHostPort(ip, port))
 		}
 		writeJSON(w, http.StatusOK, map[string][]string{"urls": urls})
+	})
+	mux.HandleFunc("GET /api/update", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, updater.Check(r.URL.Query().Get("force") == "1"))
 	})
 	mux.HandleFunc("GET /api/status", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, a.manager.Status())
@@ -381,6 +386,8 @@ func spaHandler(dir string) http.Handler {
 
 // homeIPs : l'adresse locale utilisée pour joindre target (ou Internet), puis les autres
 // adresses privées. Écarte les interfaces virtuelles (Docker, VM, VPN) quand c'est possible.
+var updater = &Updater{current: "dev"}
+
 func homeIPs(target string) []string {
 	var ips []string
 	seen := map[string]bool{}
